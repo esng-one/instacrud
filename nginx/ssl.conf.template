@@ -53,10 +53,6 @@ server {
         proxy_pass http://backend_upstream;
     }
 
-    location /oauth/ {
-        proxy_pass http://backend_upstream;
-    }
-
     location /openapi.json {
         proxy_pass http://backend_upstream;
     }
