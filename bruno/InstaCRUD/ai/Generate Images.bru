@@ -1,0 +1,115 @@
+meta {
+  name: Generate Images
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/images/generate
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "prompt": "",
+    "model_id": "",
+    "size": "",
+    "quality": "",
+    "n": 0,
+    "response_format": "",
+    "image_data": ""
+  }
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/images/generate
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "prompt": "",
+        "model_id": "",
+        "size": "",
+        "quality": "",
+        "n": 0,
+        "response_format": "",
+        "image_data": ""
+      }
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "images": [],
+          "model_id": "",
+          "format": ""
+        }
+      '''
+    }
+  }
+}
+
+example {
+  name: 422 Response
+  description: Validation Error
+  
+  request: {
+    url: {{baseUrl}}/api/v1/images/generate
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "prompt": "",
+        "model_id": "",
+        "size": "",
+        "quality": "",
+        "n": 0,
+        "response_format": "",
+        "image_data": ""
+      }
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 422
+      text: Unprocessable Entity
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "detail": [
+            {
+              "loc": [],
+              "msg": "",
+              "type": ""
+            }
+          ]
+        }
+      '''
+    }
+  }
+}

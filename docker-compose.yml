@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  instacrud:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: instacrud
+    image: instacrud
+    ports:
+      - "8000:8000"
+    environment:
+      # JWT
+      SECRET_KEY: "your_secret_key"
+      ALGORITHM: "HS256"
+      TOKEN_EXPIRATION_SECONDS: "86400"
+
+      # MongoDB
+      MONGO_URL: "mongodb://test:test@mongo:27017/"
+
+      # CORS
+      CORS_ALLOW_ORIGINS: "*"
+      CORS_ALLOW_CREDENTIALS: "true"
+      CORS_ALLOW_METHODS: "*"
+      CORS_ALLOW_HEADERS: "*"
+
+      # Uvicorn workers
+      UVICORN_WORKERS: "4"
+    depends_on:
+      - mongo
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "10"
+
+  mongo:
+    image: mongo:8.2.3
+    container_name: mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: test
+      MONGO_INITDB_ROOT_PASSWORD: test
+    volumes:
+      - ./backend/volumes/mongo:/data/db
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  instacrud-ui:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: instacrud-ui
+    image: instacrud-ui
+    ports:
+      - "3000:80"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "3m"
+        max-file: "20"

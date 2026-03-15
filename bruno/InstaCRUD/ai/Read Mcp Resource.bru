@@ -1,0 +1,102 @@
+meta {
+  name: Read Mcp Resource
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/mcp/resources/read
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "mcp_server_url": "",
+    "mcp_api_key": "",
+    "uri": ""
+  }
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/mcp/resources/read
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "mcp_server_url": "",
+        "mcp_api_key": "",
+        "uri": ""
+      }
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "uri": "",
+          "content": {}
+        }
+      '''
+    }
+  }
+}
+
+example {
+  name: 422 Response
+  description: Validation Error
+  
+  request: {
+    url: {{baseUrl}}/api/v1/mcp/resources/read
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "mcp_server_url": "",
+        "mcp_api_key": "",
+        "uri": ""
+      }
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 422
+      text: Unprocessable Entity
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "detail": [
+            {
+              "loc": [],
+              "msg": "",
+              "type": ""
+            }
+          ]
+        }
+      '''
+    }
+  }
+}

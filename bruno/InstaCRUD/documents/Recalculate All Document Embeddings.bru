@@ -1,0 +1,40 @@
+meta {
+  name: Recalculate All Document Embeddings
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/documents/recalculate-embeddings-all
+  body: none
+  auth: inherit
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/documents/recalculate-embeddings-all
+    method: POST
+    mode: none
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+  
+      '''
+    }
+  }
+}

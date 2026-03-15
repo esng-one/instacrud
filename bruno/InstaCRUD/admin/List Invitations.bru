@@ -1,0 +1,103 @@
+meta {
+  name: List Invitations
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/api/v1/admin/invitations
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~organization_id: 
+  ~skip: 
+  ~limit: 
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/admin/invitations
+    method: GET
+    mode: none
+    params:query: {
+      ~organization_id: 
+      ~skip: 
+      ~limit: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        [
+          {
+            "id": "",
+            "organization_id": "",
+            "invited_by": "",
+            "invited_at": "",
+            "expires_at": "",
+            "role": "",
+            "accepted": false
+          }
+        ]
+      '''
+    }
+  }
+}
+
+example {
+  name: 422 Response
+  description: Validation Error
+  
+  request: {
+    url: {{baseUrl}}/api/v1/admin/invitations
+    method: GET
+    mode: none
+    params:query: {
+      ~organization_id: 
+      ~skip: 
+      ~limit: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 422
+      text: Unprocessable Entity
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "detail": [
+            {
+              "loc": [],
+              "msg": "",
+              "type": ""
+            }
+          ]
+        }
+      '''
+    }
+  }
+}

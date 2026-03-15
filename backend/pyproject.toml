@@ -1,0 +1,88 @@
+[project]
+name = "instacrud"
+version = "0.1.0"
+description = "A simple, AI-enabled Python and Next.js CRUD starter"
+authors = [
+    {name = "ESNG One LLC", email = "info@esng.one"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.10,<4.0"
+dependencies = [
+  "fastapi (==0.116.1)",
+  "uvicorn[standard] (==0.35.0)",
+  "beanie (==2.0.0)",
+  "pydantic (==2.11.1)",
+  "motor (==3.7.1)",
+  "PyJWT[crypto] (==2.8.0)",
+  "passlib[bcrypt] (==1.7.4)",
+  "bcrypt (==4.0.0)",
+  "python-dotenv (==1.0.0)",
+  "pydantic[email] (==2.11.1)",
+  "loguru (==0.7.0)",
+  "authlib (>=1.6.1,<2.0.0)",
+  "itsdangerous (>=2.2.0,<3.0.0)",
+  "pydantic-settings (>=2.10.1,<3.0.0)",
+  "httpx (==0.28.1)",
+  "langchain-openai (>=0.2.14,<1.0.0)",
+  "langchain-anthropic (>=0.3.8,<1.0.0)",
+  "langchain-community (>=0.3.14,<1.0.0)",
+  "sib-api-v3-sdk (>=7.6.0,<8.0.0)",
+  "jinja2 (>=3.1.0,<4.0.0)",
+  "numpy (>=2.2.0,<2.4.0)",
+  "faiss-cpu (>=1.7.4,<2.0.0)",  # Demo vector search - replace with Milvus/Pinecone in prod
+  "slowapi (>=0.1.9,<1.0.0)",
+  "google-cloud-firestore (>=2.19.0,<3.0.0)",
+  "google-cloud-resource-manager (>=1.14.0,<2.0.0)",
+  "google-auth (>=2.38.0,<3.0.0)",
+  "pycryptodome (>=3.20.0,<4.0.0)",
+]
+
+[tool.poetry]
+packages = [{ include = "instacrud" }]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "==8.4.1"
+pytest-asyncio = "==1.1.0"
+coverage = "==7.10.2"
+httpx = "==0.28.1"
+testcontainers = "^4.5.0"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+markers = [
+    # Severity levels
+    "critical: Critical security issues - data breach, auth bypass, cross-tenant access",
+    "high: High severity - privilege escalation, dangerous injection, significant auth issues",
+    "medium: Medium severity - info disclosure, weak validation, enumeration",
+    "low: Low severity - hardening, configuration issues",
+    "info: Informational findings - sanity checks, documentation",
+
+    # Attack types
+    "jwt: JWT token manipulation and validation",
+    "nosql: NoSQL injection attacks",
+    "idor: Insecure Direct Object Reference",
+    "broken_access_control: Broken access control and authorization",
+    "enumeration: User enumeration attacks",
+    "mass_assignment: Mass assignment vulnerabilities",
+    "invitation: Invitation system abuse",
+    "data_exposure: Sensitive data exposure",
+    "cors: CORS misconfiguration",
+    "input_validation: Input validation and edge cases",
+    "password: Password security",
+    "privilege_escalation: Privilege escalation attempts",
+    "misc: Miscellaneous attack vectors",
+
+    # Special markers
+    "cve_style: CVE-style attacks from known vulnerabilities",
+    "cross_tenant: Cross-tenant data access attempts",
+]
+
+[build-system]
+requires = ["poetry-core==2.1.3"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+instacrud = "instacrud.main:run"

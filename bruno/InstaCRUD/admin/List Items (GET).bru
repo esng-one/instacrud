@@ -1,0 +1,108 @@
+meta {
+  name: List Items (GET)
+  type: http
+  seq: 21
+}
+
+get {
+  url: {{baseUrl}}/api/v1/admin/tiers
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~skip: 
+  ~limit: 
+  ~filters: 
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/admin/tiers
+    method: GET
+    mode: none
+    params:query: {
+      ~skip: 
+      ~limit: 
+      ~filters: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        [
+          {
+            "_id": "",
+            "created_at": "",
+            "created_by": "",
+            "updated_at": "",
+            "updated_by": "",
+            "tier": 0,
+            "name": "",
+            "code": "",
+            "description": "",
+            "usage": "",
+            "cost": "",
+            "active": false
+          }
+        ]
+      '''
+    }
+  }
+}
+
+example {
+  name: 422 Response
+  description: Validation Error
+  
+  request: {
+    url: {{baseUrl}}/api/v1/admin/tiers
+    method: GET
+    mode: none
+    params:query: {
+      ~skip: 
+      ~limit: 
+      ~filters: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 422
+      text: Unprocessable Entity
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "detail": [
+            {
+              "loc": [],
+              "msg": "",
+              "type": ""
+            }
+          ]
+        }
+      '''
+    }
+  }
+}

@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>InstaCRUD</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:#111833;
+      --panel-2:#0f1530;
+      --muted:#8aa0c5;
+      --text:#e6eeff;
+      --acc:#6aa1ff;
+      --acc-2:#8fdaff;
+      --ok:#28c76f;
+      --err:#ff4d4f;
+      --warn:#ff9f43;
+      --border:#1f2a52;
+      --chip:#1a2346;
+      --chip-text:#c8d7ff;
+      --input:#0e1430;
+      --shadow: 0 6px 24px rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,0.02);
+      --row-hover: rgba(106,161,255,0.08);
+      --row-selected: rgba(106,161,255,0.15);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,Helvetica,sans-serif;
+      background: radial-gradient(1200px 600px at 100% -50%, rgba(131,167,255,.08), transparent 60%),
+                  radial-gradient(1000px 500px at -20% -20%, rgba(77,255,219,.06), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+    header{
+      display:flex; align-items:center; gap:16px; padding:18px 22px; position:sticky; top:0; z-index:10;
+      backdrop-filter: blur(6px);
+      background: linear-gradient(180deg, rgba(10,15,35,.8), rgba(10,15,35,.6));
+      border-bottom:1px solid var(--border);
+    }
+    .brand{display:flex; align-items:center; gap:12px; font-weight:700; letter-spacing:.3px;}
+    .logo{
+      width:36px;height:36px;border-radius:10px;
+      background: conic-gradient(from 30deg, #5aa8ff, #51ffd4, #5aa8ff);
+      box-shadow: inset 0 0 24px rgba(255,255,255,.25), 0 8px 24px rgba(0,0,0,.35);
+    }
+    .brand span{font-size:18px}
+    .spacer{flex:1}
+    .stack{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .input, select, textarea{
+      background:var(--input); border:1px solid var(--border); color:var(--text);
+      border-radius:10px; padding:10px 12px; outline:none; transition:.2s;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+      font-family: inherit; font-size: 14px;
+    }
+    .input:focus, select:focus, textarea:focus{border-color:var(--acc)}
+    .btn{
+      background: linear-gradient(180deg, #5aa8ff, #3b7be0);
+      color:#fff; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600;
+      box-shadow: 0 8px 16px rgba(58,120,224,.35);
+      transition: transform .05s ease, filter .2s ease;
+      font-size: 14px;
+    }
+    .btn:hover{filter:brightness(1.05)}
+    .btn:active{transform:translateY(1px)}
+    .btn.secondary{
+      background: linear-gradient(180deg, #1e2b58, #17224a); color:#c4d4ff; box-shadow:none; border:1px solid var(--border);
+    }
+    .btn.warn{
+      background: linear-gradient(180deg, #ff6a6d, #f34144); box-shadow: 0 8px 16px rgba(244,65,68,.35);
+    }
+    .btn.sm{padding:8px 12px; font-size:13px}
+    main{max-width:1200px; margin:24px auto; padding:0 16px 64px}
+    .tabs{display:flex; gap:8px; border-bottom:1px solid var(--border); margin-bottom:18px; flex-wrap:wrap}
+    .tab{
+      padding:10px 14px; cursor:pointer; border:1px solid transparent; border-top-left-radius:10px; border-top-right-radius:10px;
+      color:var(--muted); font-weight:600;
+    }
+    .tab.active{
+      color:var(--text); background: linear-gradient(180deg, var(--panel), var(--panel-2)); border-color:var(--border); border-bottom-color:transparent;
+      box-shadow: var(--shadow);
+    }
+    section.panel{
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      border:1px solid var(--border); border-radius:14px; padding:18px; margin:12px 0; box-shadow: var(--shadow);
+    }
+    .grid{
+      display:grid; gap:18px;
+      grid-template-columns: repeat(12, 1fr);
+    }
+    .col-4{grid-column: span 4}
+    .col-6{grid-column: span 6}
+    .col-8{grid-column: span 8}
+    .col-12{grid-column: span 12}
+    .row{display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end}
+    label{display:block; font-size:12px; color:#a9b8dd; margin-bottom:6px}
+    .field{min-width:180px; flex:1}
+    .card{background: rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px; padding:14px}
+    .title{font-weight:700; font-size:15px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between}
+    .muted{color:var(--muted)}
+    .chip{
+      background:var(--chip); color:var(--chip-text); border:1px solid var(--border);
+      font-size:12px; padding:4px 8px; border-radius:999px; display:inline-flex; gap:6px; align-items:center
+    }
+    .hidden{display:none !important}
+    .actions{display:flex; gap:8px; flex-wrap:wrap}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+
+    /* Data Grid Styles */
+    .data-grid{width:100%; border-collapse:collapse; font-size:14px}
+    .data-grid th{
+      text-align:left; padding:12px 10px; border-bottom:2px solid var(--border);
+      color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.5px;
+      position: sticky; top: 0; background: var(--panel);
+    }
+    .data-grid td{
+      padding:12px 10px; border-bottom:1px solid var(--border); vertical-align:middle;
+    }
+    .data-grid tbody tr{cursor:pointer; transition: background .15s}
+    .data-grid tbody tr:hover{background:var(--row-hover)}
+    .data-grid tbody tr.selected{background:var(--row-selected)}
+    .data-grid .cell-id{font-family:monospace; font-size:12px; color:var(--muted); max-width:100px; overflow:hidden; text-overflow:ellipsis}
+    .data-grid .cell-action{width:80px; text-align:center}
+    .grid-wrapper{max-height:400px; overflow:auto; border:1px solid var(--border); border-radius:10px}
+
+    /* Pagination */
+    .pagination{display:flex; align-items:center; justify-content:space-between; margin-top:12px; font-size:13px; color:var(--muted)}
+    .pagination .page-info{display:flex; align-items:center; gap:8px}
+    .pagination button{background:var(--chip); border:1px solid var(--border); color:var(--text); padding:6px 12px; border-radius:6px; cursor:pointer}
+    .pagination button:disabled{opacity:.4; cursor:not-allowed}
+    .pagination button:not(:disabled):hover{background:var(--row-hover)}
+
+    /* Detail Panel */
+    .detail-panel{
+      background: rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px; padding:20px;
+    }
+    .detail-panel .detail-header{
+      display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; gap:16px;
+    }
+    .detail-panel h3{margin:0 0 4px 0; font-size:18px; font-weight:600}
+    .detail-panel .detail-subtitle{color:var(--muted); font-size:13px}
+    .detail-fields{display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:16px}
+    .detail-field label{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px}
+    .detail-field .value{font-size:14px; color:var(--text); word-break:break-word}
+
+    /* Modal */
+    .modal-backdrop{
+      position:fixed; inset:0; background:rgba(0,0,0,.6); backdrop-filter:blur(4px);
+      display:flex; align-items:center; justify-content:center; z-index:100;
+    }
+    .modal{
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      border:1px solid var(--border); border-radius:16px; padding:24px;
+      max-width:500px; width:90%; max-height:90vh; overflow-y:auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    }
+    .modal h3{margin:0 0 8px 0; font-size:20px}
+    .modal .modal-subtitle{color:var(--muted); font-size:13px; margin-bottom:20px}
+    .modal .form-grid{display:grid; gap:14px}
+    .modal .form-actions{display:flex; gap:10px; justify-content:flex-end; margin-top:20px}
+
+    /* Empty state */
+    .empty-state{text-align:center; padding:40px 20px; color:var(--muted)}
+    .empty-state svg{width:48px; height:48px; margin-bottom:12px; opacity:.5}
+
+    /* Loading */
+    .loading{text-align:center; padding:40px; color:var(--muted)}
+    .spinner{display:inline-block; width:24px; height:24px; border:3px solid var(--border); border-top-color:var(--acc); border-radius:50%; animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Toolbar */
+    .toolbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:12px; flex-wrap:wrap}
+    .toolbar .search-box{flex:1; max-width:300px}
+
+    @media (max-width: 900px){
+      .grid{grid-template-columns: repeat(6, 1fr)}
+      .col-4,.col-6,.col-8{grid-column: span 6}
+      .detail-fields{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span>InstaCRUD</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="stack">
+      <div class="chip" id="authStatus"><span>Not signed in</span></div>
+      <button class="btn secondary sm" id="btnSignOut">Sign Out</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Auth Section (shown when not logged in) -->
+    <section id="auth-section" class="panel">
+      <div class="grid">
+        <div class="col-6">
+          <div class="card">
+            <div class="title">Sign In</div>
+            <div class="row">
+              <div class="field">
+                <label>Email</label>
+                <input class="input" id="signinEmail" placeholder="you@example.com" style="width:100%" />
+              </div>
+              <div class="field">
+                <label>Password</label>
+                <input class="input" id="signinPassword" type="password" placeholder="Password" style="width:100%" />
+              </div>
+            </div>
+            <div class="actions" style="margin-top:14px">
+              <button class="btn" id="btnSignIn">Sign In</button>
+            </div>
+            <div id="signinError" class="muted" style="margin-top:10px; font-size:13px"></div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="card">
+            <div class="title">Sign Up with Invitation</div>
+            <div class="row">
+              <div class="field">
+                <label>Invitation ID</label>
+                <input class="input" id="signupInvitationId" placeholder="Invitation ID" style="width:100%" />
+              </div>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <div class="field">
+                <label>Name</label>
+                <input class="input" id="signupName" placeholder="Your name" style="width:100%" />
+              </div>
+              <div class="field">
+                <label>Email</label>
+                <input class="input" id="signupEmail" placeholder="you@example.com" style="width:100%" />
+              </div>
+              <div class="field">
+                <label>Password</label>
+                <input class="input" id="signupPassword" type="password" placeholder="Create password" style="width:100%" />
+              </div>
+            </div>
+            <div class="actions" style="margin-top:14px">
+              <button class="btn" id="btnSignUp">Sign Up</button>
+            </div>
+            <div id="signupError" class="muted" style="margin-top:10px; font-size:13px"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main App Section (shown when logged in) -->
+    <section id="app-section" class="hidden">
+      <div class="tabs" id="mainTabs">
+        <div class="tab active" data-entity="clients">Clients</div>
+        <div class="tab" data-entity="contacts">Contacts</div>
+        <div class="tab" data-entity="addresses">Addresses</div>
+        <div class="tab" data-entity="projects">Projects</div>
+        <div class="tab" data-entity="documents">Documents</div>
+      </div>
+
+      <div class="grid">
+        <!-- Grid Column -->
+        <div class="col-8" id="grid-column">
+          <div class="toolbar">
+            <div class="search-box">
+              <input class="input" id="searchInput" placeholder="Search..." style="width:100%" />
+            </div>
+            <button class="btn" id="btnNew">+ New</button>
+          </div>
+
+          <div class="grid-wrapper">
+            <table class="data-grid" id="dataGrid">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="pagination">
+            <div class="page-info">
+              <span id="pageInfo">0-0 of 0</span>
+            </div>
+            <div class="page-controls">
+              <button id="btnPrev" disabled>&larr; Prev</button>
+              <button id="btnNext" disabled>Next &rarr;</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detail Column -->
+        <div class="col-4" id="detail-column">
+          <div class="detail-panel" id="detailPanel">
+            <div class="empty-state" id="emptyDetail">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <p>Select an item to view details</p>
+            </div>
+            <div id="detailContent" class="hidden"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal -->
+  <div class="modal-backdrop hidden" id="modalBackdrop">
+    <div class="modal" id="modal">
+      <h3 id="modalTitle">New Item</h3>
+      <p class="modal-subtitle" id="modalSubtitle">Fill in the details below</p>
+      <div class="form-grid" id="modalForm"></div>
+      <div class="form-actions">
+        <button class="btn secondary" id="btnModalCancel">Cancel</button>
+        <button class="btn" id="btnModalSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Utilities
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
+    const setHidden = (el, hidden) => el.classList.toggle('hidden', hidden);
+    const btoaSafe = (s) => window.btoa(unescape(encodeURIComponent(s)));
+    const atobSafe = (s) => decodeURIComponent(escape(window.atob(s)));
+
+    // LocalStorage helpers
+    const LS = {
+      get(key, fallback){ try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } },
+      set(key, val){ localStorage.setItem(key, JSON.stringify(val)); },
+      remove(key){ localStorage.removeItem(key); }
+    };
+
+    // HTML escape to prevent XSS
+    function esc(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // API helpers
+    function getHeaders(){
+      const t = state.token?.access_token;
+      const h = { 'Content-Type': 'application/json' };
+      if (t) h['Authorization'] = `Bearer ${t}`;
+      return h;
+    }
+
+    async function api(method, path, body, query){
+      const params = new URLSearchParams();
+      Object.entries(query || {}).forEach(([k,v]) => {
+        if (v !== undefined && v !== null && v !== '') params.append(k, v);
+      });
+      const qs = params.toString();
+      const url = `${path}${qs ? '?' + qs : ''}`;
+      const res = await fetch(url, {
+        method,
+        headers: getHeaders(),
+        body: body && method !== 'GET' ? JSON.stringify(body) : undefined
+      });
+      const text = await res.text();
+      let parsed;
+      try { parsed = text ? JSON.parse(text) : null; } catch { parsed = text; }
+      if (!res.ok) {
+        const errMsg = typeof parsed === 'object' ? (parsed.detail || JSON.stringify(parsed)) : parsed;
+        throw new Error(errMsg);
+      }
+      return parsed;
+    }
+
+    // JWT decode
+    function decodeJwt(token){
+      try {
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+        return JSON.parse(atobSafe(parts[1]));
+      } catch { return null; }
+    }
+
+    // Entity configurations
+    const entities = {
+      clients: {
+        endpoint: '/clients',
+        idKey: '_id',
+        columns: [
+          { key: 'name', label: 'Name' },
+          { key: 'code', label: 'Code', width: '120px' },
+          { key: 'type', label: 'Type', width: '100px', render: v => v || '-' },
+        ],
+        detailFields: [
+          { key: '_id', label: 'ID' },
+          { key: 'code', label: 'Code' },
+          { key: 'name', label: 'Name' },
+          { key: 'type', label: 'Type' },
+          { key: 'description', label: 'Description' },
+          { key: 'contact_ids', label: 'Contact IDs', render: v => Array.isArray(v) ? v.join(', ') : '-' },
+          { key: 'address_ids', label: 'Address IDs', render: v => Array.isArray(v) ? v.join(', ') : '-' },
+          { key: 'created_at', label: 'Created', render: v => v ? new Date(v).toLocaleString() : '-' },
+          { key: 'updated_at', label: 'Updated', render: v => v ? new Date(v).toLocaleString() : '-' },
+        ],
+        formFields: [
+          { key: 'code', label: 'Code', type: 'text', required: true },
+          { key: 'name', label: 'Name', type: 'text', required: true },
+          { key: 'type', label: 'Type', type: 'select', options: ['COMPANY', 'PERSON'] },
+          { key: 'description', label: 'Description', type: 'textarea' },
+        ],
+        getTitle: item => item.name || item.code || 'Client',
+      },
+      contacts: {
+        endpoint: '/contacts',
+        idKey: '_id',
+        columns: [
+          { key: 'name', label: 'Name' },
+          { key: 'title', label: 'Title', width: '140px' },
+          { key: 'email', label: 'Email' },
+          { key: 'phone', label: 'Phone', width: '140px' },
+        ],
+        detailFields: [
+          { key: '_id', label: 'ID' },
+          { key: 'name', label: 'Name' },
+          { key: 'title', label: 'Title' },
+          { key: 'email', label: 'Email' },
+          { key: 'phone', label: 'Phone' },
+          { key: 'created_at', label: 'Created', render: v => v ? new Date(v).toLocaleString() : '-' },
+          { key: 'updated_at', label: 'Updated', render: v => v ? new Date(v).toLocaleString() : '-' },
+        ],
+        formFields: [
+          { key: 'name', label: 'Name', type: 'text', required: true },
+          { key: 'title', label: 'Title', type: 'text' },
+          { key: 'email', label: 'Email', type: 'text' },
+          { key: 'phone', label: 'Phone', type: 'text' },
+        ],
+        getTitle: item => item.name || 'Contact',
+      },
+      addresses: {
+        endpoint: '/addresses',
+        idKey: '_id',
+        columns: [
+          { key: 'street', label: 'Street' },
+          { key: 'city', label: 'City', width: '120px' },
+          { key: 'state', label: 'State', width: '80px' },
+          { key: 'country', label: 'Country', width: '100px' },
+        ],
+        detailFields: [
+          { key: '_id', label: 'ID' },
+          { key: 'street', label: 'Street' },
+          { key: 'street2', label: 'Street 2' },
+          { key: 'city', label: 'City' },
+          { key: 'state', label: 'State' },
+          { key: 'zip_code', label: 'ZIP Code' },
+          { key: 'country', label: 'Country' },
+          { key: 'created_at', label: 'Created', render: v => v ? new Date(v).toLocaleString() : '-' },
+          { key: 'updated_at', label: 'Updated', render: v => v ? new Date(v).toLocaleString() : '-' },
+        ],
+        formFields: [
+          { key: 'street', label: 'Street', type: 'text', required: true },
+          { key: 'street2', label: 'Street 2', type: 'text' },
+          { key: 'city', label: 'City', type: 'text', required: true },
+          { key: 'state', label: 'State', type: 'text' },
+          { key: 'zip_code', label: 'ZIP Code', type: 'text' },
+          { key: 'country', label: 'Country', type: 'text' },
+        ],
+        getTitle: item => [item.street, item.city].filter(Boolean).join(', ') || 'Address',
+      },
+      projects: {
+        endpoint: '/projects',
+        idKey: '_id',
+        columns: [
+          { key: 'name', label: 'Name' },
+          { key: 'code', label: 'Code', width: '120px' },
+          { key: 'start_date', label: 'Start', width: '110px', render: v => v ? new Date(v).toLocaleDateString() : '-' },
+          { key: 'end_date', label: 'End', width: '110px', render: v => v ? new Date(v).toLocaleDateString() : '-' },
+        ],
+        detailFields: [
+          { key: '_id', label: 'ID' },
+          { key: 'code', label: 'Code' },
+          { key: 'name', label: 'Name' },
+          { key: 'client_id', label: 'Client ID' },
+          { key: 'description', label: 'Description' },
+          { key: 'start_date', label: 'Start Date', render: v => v ? new Date(v).toLocaleDateString() : '-' },
+          { key: 'end_date', label: 'End Date', render: v => v ? new Date(v).toLocaleDateString() : '-' },
+          { key: 'created_at', label: 'Created', render: v => v ? new Date(v).toLocaleString() : '-' },
+          { key: 'updated_at', label: 'Updated', render: v => v ? new Date(v).toLocaleString() : '-' },
+        ],
+        formFields: [
+          { key: 'code', label: 'Code', type: 'text', required: true },
+          { key: 'name', label: 'Name', type: 'text', required: true },
+          { key: 'client_id', label: 'Client ID', type: 'text' },
+          { key: 'description', label: 'Description', type: 'textarea' },
+          { key: 'start_date', label: 'Start Date', type: 'date', required: true },
+          { key: 'end_date', label: 'End Date', type: 'date' },
+        ],
+        getTitle: item => item.name || item.code || 'Project',
+      },
+      documents: {
+        endpoint: '/documents',
+        idKey: '_id',
+        columns: [
+          { key: 'name', label: 'Name' },
+          { key: 'project_id', label: 'Project', width: '120px' },
+        ],
+        detailFields: [
+          { key: '_id', label: 'ID' },
+          { key: 'code', label: 'Code' },
+          { key: 'name', label: 'Name' },
+          { key: 'project_id', label: 'Project ID' },
+          { key: 'description', label: 'Description' },
+          { key: 'content', label: 'Content' },
+          { key: 'created_at', label: 'Created', render: v => v ? new Date(v).toLocaleString() : '-' },
+          { key: 'updated_at', label: 'Updated', render: v => v ? new Date(v).toLocaleString() : '-' },
+        ],
+        formFields: [
+          { key: 'code', label: 'Code', type: 'text', required: true },
+          { key: 'name', label: 'Name', type: 'text', required: true },
+          { key: 'project_id', label: 'Project ID', type: 'text', required: true },
+          { key: 'description', label: 'Description', type: 'text' },
+          { key: 'content', label: 'Content', type: 'textarea' },
+        ],
+        getTitle: item => item.name || item.code || 'Document',
+      },
+    };
+
+    // App State
+    const state = {
+      token: LS.get('token', null),
+      currentEntity: 'clients',
+      items: [],
+      selectedId: null,
+      selectedItem: null,
+      page: 0,
+      pageSize: 10,
+      totalCount: 0,
+      searchQuery: '',
+      editMode: null, // 'create' | 'edit'
+      editItem: null,
+    };
+
+    // Render Grid
+    function renderGrid() {
+      const config = entities[state.currentEntity];
+      const thead = $('#dataGrid thead');
+      const tbody = $('#dataGrid tbody');
+
+      // Header
+      thead.innerHTML = `<tr>
+        ${config.columns.map(col =>
+          `<th style="${col.width ? 'width:'+col.width : ''}">${col.label}</th>`
+        ).join('')}
+        <th class="cell-action">Action</th>
+      </tr>`;
+
+      // Body
+      if (state.items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${config.columns.length + 1}" class="empty-state">No items found</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = state.items.map((item, idx) => {
+        const id = item[config.idKey];
+        const isSelected = id === state.selectedId;
+        return `<tr data-id="${esc(id)}" class="${isSelected ? 'selected' : ''}">
+          ${config.columns.map(col => {
+            let val = item[col.key];
+            if (col.render) val = col.render(val);
+            return `<td>${esc(val ?? '-')}</td>`;
+          }).join('')}
+          <td class="cell-action">
+            <button class="btn secondary sm" data-delete="${esc(id)}" title="Delete">×</button>
+          </td>
+        </tr>`;
+      }).join('');
+
+      // Row click handlers
+      tbody.querySelectorAll('tr[data-id]').forEach(row => {
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('[data-delete]')) return;
+          selectItem(row.dataset.id);
+        });
+      });
+
+      // Delete handlers
+      tbody.querySelectorAll('[data-delete]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!confirm('Are you sure you want to delete this item?')) return;
+          try {
+            await api('DELETE', `${config.endpoint}/${btn.dataset.delete}`);
+            await loadItems();
+            if (state.selectedId === btn.dataset.delete) {
+              state.selectedId = null;
+              state.selectedItem = null;
+              renderDetail();
+            }
+          } catch (err) {
+            alert('Failed to delete: ' + err.message);
+          }
+        });
+      });
+
+      // Pagination info
+      const start = state.items.length ? state.page * state.pageSize + 1 : 0;
+      const end = start + state.items.length - 1;
+      $('#pageInfo').textContent = `${start}-${end} of ${state.totalCount}`;
+      $('#btnPrev').disabled = state.page === 0;
+      $('#btnNext').disabled = end >= state.totalCount;
+    }
+
+    // Render Detail
+    function renderDetail() {
+      const config = entities[state.currentEntity];
+      const empty = $('#emptyDetail');
+      const content = $('#detailContent');
+
+      if (!state.selectedItem) {
+        setHidden(empty, false);
+        setHidden(content, true);
+        return;
+      }
+
+      setHidden(empty, true);
+      setHidden(content, false);
+
+      const item = state.selectedItem;
+      content.innerHTML = `
+        <div class="detail-header">
+          <div>
+            <h3>${esc(config.getTitle(item))}</h3>
+            <div class="detail-subtitle">${state.currentEntity.slice(0, -1)}</div>
+          </div>
+          <div class="actions">
+            <button class="btn secondary sm" id="btnEditItem">Edit</button>
+            <button class="btn warn sm" id="btnDeleteItem">Delete</button>
+          </div>
+        </div>
+        <div class="detail-fields">
+          ${config.detailFields.map(field => {
+            let val = item[field.key];
+            if (field.render) val = field.render(val);
+            return `<div class="detail-field">
+              <label>${field.label}</label>
+              <div class="value">${esc(val ?? '-')}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      `;
+
+      $('#btnEditItem').addEventListener('click', () => openModal('edit', item));
+      $('#btnDeleteItem').addEventListener('click', async () => {
+        if (!confirm('Are you sure you want to delete this item?')) return;
+        try {
+          await api('DELETE', `${config.endpoint}/${item[config.idKey]}`);
+          state.selectedId = null;
+          state.selectedItem = null;
+          await loadItems();
+          renderDetail();
+        } catch (err) {
+          alert('Failed to delete: ' + err.message);
+        }
+      });
+    }
+
+    // Select Item
+    async function selectItem(id) {
+      const config = entities[state.currentEntity];
+      state.selectedId = id;
+
+      // Update row selection visual
+      $$('#dataGrid tbody tr').forEach(row => {
+        row.classList.toggle('selected', row.dataset.id === id);
+      });
+
+      // Fetch full item
+      try {
+        state.selectedItem = await api('GET', `${config.endpoint}/${id}`);
+        renderDetail();
+      } catch (err) {
+        console.error('Failed to fetch item:', err);
+        state.selectedItem = null;
+        renderDetail();
+      }
+    }
+
+    // Load Items
+    async function loadItems() {
+      const config = entities[state.currentEntity];
+      try {
+        const query = {
+          skip: state.page * state.pageSize,
+          limit: state.pageSize,
+        };
+        const items = await api('GET', config.endpoint, null, query);
+        let result = Array.isArray(items) ? items : [];
+
+        // Client-side search filter
+        if (state.searchQuery) {
+          const q = state.searchQuery.toLowerCase();
+          result = result.filter(item => {
+            return config.columns.some(col => {
+              const val = item[col.key];
+              return val && String(val).toLowerCase().includes(q);
+            });
+          });
+        }
+
+        state.items = result;
+        // Estimate total (API should return this properly)
+        state.totalCount = state.items.length < state.pageSize
+          ? state.page * state.pageSize + state.items.length
+          : (state.page + 2) * state.pageSize;
+        renderGrid();
+      } catch (err) {
+        console.error('Failed to load items:', err);
+        state.items = [];
+        state.totalCount = 0;
+        renderGrid();
+      }
+    }
+
+    // Modal
+    function openModal(mode, item = {}) {
+      const config = entities[state.currentEntity];
+      state.editMode = mode;
+      state.editItem = { ...item };
+
+      const modelName = state.currentEntity.slice(0, -1);
+      $('#modalTitle').textContent = mode === 'create' ? `New ${modelName}` : `Edit ${modelName}`;
+      $('#modalSubtitle').textContent = mode === 'create'
+        ? `Enter ${modelName} details below`
+        : `Update ${modelName} information`;
+
+      const form = $('#modalForm');
+      form.innerHTML = config.formFields.map(field => {
+        const val = state.editItem[field.key] ?? '';
+        const req = field.required ? '<span style="color:var(--err)">*</span>' : '';
+
+        if (field.type === 'select') {
+          return `<div class="field">
+            <label>${field.label} ${req}</label>
+            <select class="input" data-field="${field.key}" style="width:100%">
+              <option value="">Select...</option>
+              ${field.options.map(opt =>
+                `<option value="${esc(opt)}" ${val === opt ? 'selected' : ''}>${esc(opt)}</option>`
+              ).join('')}
+            </select>
+          </div>`;
+        }
+        if (field.type === 'textarea') {
+          return `<div class="field">
+            <label>${field.label} ${req}</label>
+            <textarea class="input" data-field="${field.key}" rows="3" style="width:100%">${esc(val)}</textarea>
+          </div>`;
+        }
+        if (field.type === 'date') {
+          const dateVal = val ? val.split('T')[0] : '';
+          return `<div class="field">
+            <label>${field.label} ${req}</label>
+            <input type="date" class="input" data-field="${field.key}" value="${esc(dateVal)}" style="width:100%" />
+          </div>`;
+        }
+        return `<div class="field">
+          <label>${field.label} ${req}</label>
+          <input type="text" class="input" data-field="${field.key}" value="${esc(val)}" style="width:100%" ${field.required ? 'required' : ''} />
+        </div>`;
+      }).join('');
+
+      setHidden($('#modalBackdrop'), false);
+    }
+
+    function closeModal() {
+      setHidden($('#modalBackdrop'), true);
+      state.editMode = null;
+      state.editItem = null;
+    }
+
+    async function saveModal() {
+      const config = entities[state.currentEntity];
+      const form = $('#modalForm');
+
+      // Gather form data
+      form.querySelectorAll('[data-field]').forEach(input => {
+        let val = input.value;
+        if (input.type === 'date' && val) {
+          val = new Date(val + 'T12:00:00').toISOString();
+        }
+        state.editItem[input.dataset.field] = val || null;
+      });
+
+      try {
+        if (state.editMode === 'create') {
+          await api('POST', config.endpoint, state.editItem);
+        } else {
+          const id = state.editItem[config.idKey];
+          await api('PUT', `${config.endpoint}/${id}`, state.editItem);
+        }
+        closeModal();
+        await loadItems();
+        // If editing, refresh detail
+        if (state.editMode === 'edit' && state.selectedId) {
+          await selectItem(state.selectedId);
+        }
+      } catch (err) {
+        alert('Failed to save: ' + err.message);
+      }
+    }
+
+    // Auth UI
+    function updateAuthUI() {
+      const t = state.token;
+      const authSection = $('#auth-section');
+      const appSection = $('#app-section');
+      const status = $('#authStatus');
+
+      if (!t) {
+        setHidden(authSection, false);
+        setHidden(appSection, true);
+        status.innerHTML = '<span>Not signed in</span>';
+        return;
+      }
+
+      const payload = decodeJwt(t.access_token || '') || {};
+      setHidden(authSection, true);
+      setHidden(appSection, false);
+      status.innerHTML = `<span>${esc(payload.email || 'Signed in')}</span>`;
+
+      // Load initial data
+      loadItems();
+    }
+
+    function setToken(token) {
+      state.token = token || null;
+      if (token) LS.set('token', token);
+      else LS.remove('token');
+      updateAuthUI();
+    }
+
+    // Switch Entity Tab
+    function switchEntity(entityName) {
+      state.currentEntity = entityName;
+      state.items = [];
+      state.selectedId = null;
+      state.selectedItem = null;
+      state.page = 0;
+      state.searchQuery = '';
+      $('#searchInput').value = '';
+
+      // Update tabs
+      $$('#mainTabs .tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.entity === entityName);
+      });
+
+      renderDetail();
+      loadItems();
+    }
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      updateAuthUI();
+
+      // Auth handlers
+      $('#btnSignIn').addEventListener('click', async () => {
+        const email = $('#signinEmail').value.trim();
+        const password = $('#signinPassword').value;
+        try {
+          const res = await api('POST', '/signin', { email, password });
+          setToken(res);
+          $('#signinError').textContent = '';
+        } catch (err) {
+          $('#signinError').textContent = err.message;
+        }
+      });
+
+      $('#btnSignUp').addEventListener('click', async () => {
+        try {
+          const data = {
+            invitation_id: $('#signupInvitationId').value.trim(),
+            name: $('#signupName').value.trim(),
+            email: $('#signupEmail').value.trim(),
+            password: $('#signupPassword').value,
+          };
+          await api('POST', '/signup', data);
+          $('#signupError').textContent = 'Sign up successful! Please sign in.';
+          $('#signupError').style.color = 'var(--ok)';
+        } catch (err) {
+          $('#signupError').textContent = err.message;
+          $('#signupError').style.color = 'var(--err)';
+        }
+      });
+
+      $('#btnSignOut').addEventListener('click', () => setToken(null));
+
+      // Tab handlers
+      $$('#mainTabs .tab').forEach(tab => {
+        tab.addEventListener('click', () => switchEntity(tab.dataset.entity));
+      });
+
+      // Search
+      let searchTimeout;
+      $('#searchInput').addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          state.searchQuery = e.target.value;
+          state.page = 0;
+          loadItems();
+        }, 300);
+      });
+
+      // Pagination
+      $('#btnPrev').addEventListener('click', () => {
+        if (state.page > 0) {
+          state.page--;
+          loadItems();
+        }
+      });
+      $('#btnNext').addEventListener('click', () => {
+        state.page++;
+        loadItems();
+      });
+
+      // New button
+      $('#btnNew').addEventListener('click', () => openModal('create'));
+
+      // Modal handlers
+      $('#btnModalCancel').addEventListener('click', closeModal);
+      $('#btnModalSave').addEventListener('click', saveModal);
+      $('#modalBackdrop').addEventListener('click', (e) => {
+        if (e.target === $('#modalBackdrop')) closeModal();
+      });
+
+      // Enter key for sign in
+      $('#signinPassword').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') $('#btnSignIn').click();
+      });
+    });
+  </script>
+</body>
+</html>

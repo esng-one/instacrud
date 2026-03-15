@@ -1,0 +1,110 @@
+meta {
+  name: Get Item
+  type: http
+  seq: 16
+}
+
+get {
+  url: {{baseUrl}}/api/v1/admin/ai-models/:item_id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  item_id: 
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/admin/ai-models/:item_id
+    method: GET
+    mode: none
+    params:path: {
+      item_id: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "_id": "",
+          "created_at": "",
+          "created_by": "",
+          "updated_at": "",
+          "updated_by": "",
+          "service": "",
+          "name": "",
+          "model_identifier": "",
+          "temperature": "",
+          "max_tokens": "",
+          "credits": "",
+          "input_tokens_cost": "",
+          "output_tokens_cost": "",
+          "completion": false,
+          "embedding": false,
+          "image_completion": false,
+          "image_generation": false,
+          "reasoning": false,
+          "enabled": false,
+          "rank": "",
+          "params": "",
+          "tier": ""
+        }
+      '''
+    }
+  }
+}
+
+example {
+  name: 422 Response
+  description: Validation Error
+  
+  request: {
+    url: {{baseUrl}}/api/v1/admin/ai-models/:item_id
+    method: GET
+    mode: none
+    params:path: {
+      item_id: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 422
+      text: Unprocessable Entity
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "detail": [
+            {
+              "loc": [],
+              "msg": "",
+              "type": ""
+            }
+          ]
+        }
+      '''
+    }
+  }
+}

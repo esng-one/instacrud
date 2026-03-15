@@ -1,0 +1,112 @@
+meta {
+  name: Patch Item (4)
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/documents/:item_id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  item_id: 
+}
+
+body:json {
+  {}
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/documents/:item_id
+    method: PATCH
+    mode: json
+    params:path: {
+      item_id: 
+    }
+  
+    body:json: {
+      {}
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "search_tokens": [],
+          "_id": "",
+          "created_at": "",
+          "created_by": "",
+          "updated_at": "",
+          "updated_by": "",
+          "project_id": "",
+          "code": "",
+          "name": "",
+          "content": "",
+          "description": "",
+          "content_embedding": ""
+        }
+      '''
+    }
+  }
+}
+
+example {
+  name: 422 Response
+  description: Validation Error
+  
+  request: {
+    url: {{baseUrl}}/api/v1/documents/:item_id
+    method: PATCH
+    mode: json
+    params:path: {
+      item_id: 
+    }
+  
+    body:json: {
+      {}
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 422
+      text: Unprocessable Entity
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "detail": [
+            {
+              "loc": [],
+              "msg": "",
+              "type": ""
+            }
+          ]
+        }
+      '''
+    }
+  }
+}

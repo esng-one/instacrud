@@ -1,0 +1,106 @@
+meta {
+  name: Create Completion
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/completion
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "prompt": "",
+    "model_id": "",
+    "stream": false,
+    "reasoning": false
+  }
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/completion
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "prompt": "",
+        "model_id": "",
+        "stream": false,
+        "reasoning": false
+      }
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "content": "",
+          "model_id": "",
+          "reasoning_content": ""
+        }
+      '''
+    }
+  }
+}
+
+example {
+  name: 422 Response
+  description: Validation Error
+  
+  request: {
+    url: {{baseUrl}}/api/v1/completion
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "prompt": "",
+        "model_id": "",
+        "stream": false,
+        "reasoning": false
+      }
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 422
+      text: Unprocessable Entity
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "detail": [
+            {
+              "loc": [],
+              "msg": "",
+              "type": ""
+            }
+          ]
+        }
+      '''
+    }
+  }
+}

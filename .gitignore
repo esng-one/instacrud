@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Env & Poetry
+.env
+.env.vps
+.venv/
+
+# Test & cache
+.pytest_cache/
+.cache/
+*.log
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+volumes/
+
+# Services
+**/.claude/*
+!**/.claude/CLAUDE.md
+**/.gemini/*
+!**/.gemini/GEMINI.md
+
+# Frontend test results
+frontend/test-results/

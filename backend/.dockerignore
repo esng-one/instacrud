@@ -1,0 +1,7 @@
+test/
+*.pyc
+__pycache__/
+.env
+.venv/
+.git/
+volumes/

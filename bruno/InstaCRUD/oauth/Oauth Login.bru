@@ -1,0 +1,83 @@
+meta {
+  name: Oauth Login
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/signin/:provider
+  body: none
+  auth: inherit
+}
+
+params:path {
+  provider: 
+}
+
+example {
+  name: 307 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/signin/:provider
+    method: GET
+    mode: none
+    params:path: {
+      provider: 
+    }
+  }
+  
+  response: {
+    status: {
+      code: 307
+      text: Temporary Redirect
+    }
+  
+    body: {
+      type: text
+      content: '''
+  
+      '''
+    }
+  }
+}
+
+example {
+  name: 422 Response
+  description: Validation Error
+  
+  request: {
+    url: {{baseUrl}}/api/v1/signin/:provider
+    method: GET
+    mode: none
+    params:path: {
+      provider: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 422
+      text: Unprocessable Entity
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "detail": [
+            {
+              "loc": [],
+              "msg": "",
+              "type": ""
+            }
+          ]
+        }
+      '''
+    }
+  }
+}

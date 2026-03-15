@@ -1,0 +1,154 @@
+version: '3.8'
+
+# Production deployment supporting both VPS (SSL) and ngrok (no SSL) scenarios
+#
+# Usage:
+#   VPS (SSL):    SSL_ENABLED=true DOMAIN=demo.instacrud.it BASE_URL=https://demo.instacrud.it \
+#                 docker compose -f docker-compose.vps.yml --profile ssl up -d
+#
+#   ngrok (HTTP): BASE_URL=https://xxx.ngrok-free.app \
+#                 docker compose -f docker-compose.vps.yml up -d
+#
+# Note: For VPS, BASE_URL = https://${DOMAIN}. For ngrok, set BASE_URL to your ngrok URL.
+# See .env.vps.example for all required environment variables.
+
+services:
+  mongo:
+    image: mongo:8.2.3
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: instacrud
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - ./backend/volumes/mongo:/data/db
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: instacrud-backend-vps
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      # Mode
+      MODE: prod
+
+      # Base URLs (from environment)
+      BASE_URL: ${BASE_URL}
+      FRONTEND_BASE_URL: ${BASE_URL}
+
+      # JWT
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: HS256
+      TOKEN_EXPIRATION_SECONDS: "86400"
+
+      # MongoDB (internal Docker network)
+      DB_ENGINE: mongo
+      MONGO_URL: mongodb://instacrud:${MONGO_PASSWORD}@mongo:27017/
+
+      # CORS
+      CORS_ALLOW_ORIGINS: ${BASE_URL}
+      CORS_ALLOW_CREDENTIALS: "true"
+      CORS_ALLOW_METHODS: "*"
+      CORS_ALLOW_HEADERS: "*"
+
+      # Google OAuth
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+
+      # Microsoft OAuth
+      MS_CLIENT_ID: ${MS_CLIENT_ID}
+      MS_CLIENT_SECRET: ${MS_CLIENT_SECRET}
+      MS_TENANT_ID: ${MS_TENANT_ID:-common}
+
+      # Cloudflare Turnstile
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY}
+      TURNSTILE_MODE: ${TURNSTILE_MODE:-normal}
+
+      # Email
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
+      EMAIL_CARRIER: ${EMAIL_CARRIER:-file}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-noreply@instacrud.it}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-InstaCRUD}
+
+      # DeepInfra (AI features)
+      DEEP_INFRA_KEY: ${DEEP_INFRA_KEY:-}
+
+      # Public Settings
+      OPEN_REGISTRATION: ${OPEN_REGISTRATION:-false}
+      SUGGEST_LOADING_MOCK_DATA: ${SUGGEST_LOADING_MOCK_DATA:-false}
+      SUGGEST_LOADING_MOCK_DATA_DEFAULT: ${SUGGEST_LOADING_MOCK_DATA_DEFAULT:-false}
+      DEFAULT_TIER_CODE: ${DEFAULT_TIER_CODE:-}
+
+      # Uvicorn workers
+      UVICORN_WORKERS: "4"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "10"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.vps
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${BASE_URL}
+    image: instacrud-frontend-vps
+    restart: unless-stopped
+    depends_on:
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "10"
+
+  nginx:
+    build: ./nginx
+    image: instacrud-nginx-vps
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+      - frontend
+    environment:
+      SSL_ENABLED: ${SSL_ENABLED:-false}
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & /docker-entrypoint.sh nginx -g \"daemon off;\"'"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "20"
+
+  # Certbot for SSL certificate renewal (only used with --profile ssl)
+  certbot:
+    image: certbot/certbot
+    restart: unless-stopped
+    profiles:
+      - ssl
+    volumes:
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "3m"
+        max-file: "5"

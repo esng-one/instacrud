@@ -1,0 +1,20 @@
+You're Invited to Join {{ org_name }}!
+
+Hello,
+
+{{ inviter_name }} has invited you to join {{ org_name }} on InstaCRUD.
+
+Invitation Details:
+- Role: {{ role }}
+- Expires: {{ expires_at }}
+
+To accept the invitation and create your account, please visit:
+{{ invitation_link }}
+
+IMPORTANT: This invitation will expire on {{ expires_at }}. Please accept it before then.
+
+If you didn't expect this invitation, you can safely ignore this email.
+
+---
+This is an automated message from InstaCRUD. Please do not reply to this email.
+© {{ global.year }} InstaCRUD. All rights reserved.

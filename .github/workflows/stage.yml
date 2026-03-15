@@ -1,0 +1,101 @@
+name: Stage update for every main branch push
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+      
+env:
+  # GitHub Variables (Settings -> Secrets and variables -> Actions -> Variables)
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ vars.GCP_REGION }}
+  GCP_WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+  GCP_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+  AR_HOST: ${{ vars.AR_HOST }} # e.g. us-central1-docker.pkg.dev
+  AR_REPO: ${{ vars.AR_REPO }} # e.g. instacrud-images
+
+  BACKEND_SERVICE_NAME: ${{ vars.BACKEND_SERVICE_NAME }}
+  FRONTEND_SERVICE_NAME: ${{ vars.FRONTEND_SERVICE_NAME }}
+
+  BACKEND_IMAGE_NAME: ${{ vars.BACKEND_IMAGE_NAME }}
+  FRONTEND_IMAGE_NAME: ${{ vars.FRONTEND_IMAGE_NAME }}
+
+  # Public build arg for frontend (not a secret)
+  NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    environment: stage
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Authenticate to Google Cloud 
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.GCP_WIF_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Docker to use Artifact Registry
+        run: gcloud auth configure-docker ${{ env.AR_HOST }}
+
+      - name: Build and Push Docker Image (backend)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.AR_HOST }}/${{ env.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+
+      - name: Build and Push Docker Image (frontend)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.AR_HOST }}/${{ env.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=${{ env.NEXT_PUBLIC_API_BASE_URL }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    environment: stage
+    needs: build-and-push
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.GCP_WIF_PROVIDER }}
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: Deploy to Cloud Run Frontend
+        run: |
+          gcloud run deploy "${{ env.FRONTEND_SERVICE_NAME }}" \
+            --image "${{ env.AR_HOST }}/${{ env.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.FRONTEND_IMAGE_NAME }}:latest" \
+            --region "${{ env.GCP_REGION }}" \
+            --platform managed \
+            --project "${{ env.GCP_PROJECT_ID }}" \
+            --allow-unauthenticated
+
+
+      - name: Deploy to Cloud Run Backend
+        run: |
+          gcloud run deploy "${{ env.BACKEND_SERVICE_NAME }}" \
+            --image "${{ env.AR_HOST }}/${{ env.GCP_PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.BACKEND_IMAGE_NAME }}:latest" \
+            --region "${{ env.GCP_REGION }}" \
+            --platform managed \
+            --project "${{ env.GCP_PROJECT_ID }}" \
+            --allow-unauthenticated

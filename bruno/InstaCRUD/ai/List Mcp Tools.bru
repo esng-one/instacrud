@@ -1,0 +1,107 @@
+meta {
+  name: List Mcp Tools
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/mcp/tools
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "mcp_server_url": "",
+    "mcp_api_key": "",
+    "uri": ""
+  }
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/mcp/tools
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "mcp_server_url": "",
+        "mcp_api_key": "",
+        "uri": ""
+      }
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "tools": [
+            {
+              "name": "",
+              "description": "",
+              "input_schema": {}
+            }
+          ]
+        }
+      '''
+    }
+  }
+}
+
+example {
+  name: 422 Response
+  description: Validation Error
+  
+  request: {
+    url: {{baseUrl}}/api/v1/mcp/tools
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "mcp_server_url": "",
+        "mcp_api_key": "",
+        "uri": ""
+      }
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 422
+      text: Unprocessable Entity
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "detail": [
+            {
+              "loc": [],
+              "msg": "",
+              "type": ""
+            }
+          ]
+        }
+      '''
+    }
+  }
+}

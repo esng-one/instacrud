@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  instacrud-ui:
+    build: ./
+    image: instacrud-ui
+    ports:
+      - "3000:80"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "3m"
+        max-file: "20"

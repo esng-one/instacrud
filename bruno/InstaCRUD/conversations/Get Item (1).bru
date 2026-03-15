@@ -1,0 +1,109 @@
+meta {
+  name: Get Item (1)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/conversations/:item_id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  item_id: 
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/conversations/:item_id
+    method: GET
+    mode: none
+    params:path: {
+      item_id: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "_id": "",
+          "created_at": "",
+          "created_by": "",
+          "updated_at": "",
+          "updated_by": "",
+          "user_id": "",
+          "external_uuid": "",
+          "title": "",
+          "messages": [
+            {
+              "role": "",
+              "content": "",
+              "image_data": "",
+              "image_url": "",
+              "generated_images": "",
+              "reasoning_content": "",
+              "timestamp": ""
+            }
+          ],
+          "model_id": "",
+          "last_message_at": ""
+        }
+      '''
+    }
+  }
+}
+
+example {
+  name: 422 Response
+  description: Validation Error
+  
+  request: {
+    url: {{baseUrl}}/api/v1/conversations/:item_id
+    method: GET
+    mode: none
+    params:path: {
+      item_id: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 422
+      text: Unprocessable Entity
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "detail": [
+            {
+              "loc": [],
+              "msg": "",
+              "type": ""
+            }
+          ]
+        }
+      '''
+    }
+  }
+}

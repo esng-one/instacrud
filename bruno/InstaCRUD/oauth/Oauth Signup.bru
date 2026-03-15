@@ -1,0 +1,99 @@
+meta {
+  name: Oauth Signup
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/signup/:provider
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~state: 
+}
+
+params:path {
+  provider: 
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/signup/:provider
+    method: GET
+    mode: none
+    params:query: {
+      ~state: 
+    }
+  
+    params:path: {
+      provider: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+  
+      '''
+    }
+  }
+}
+
+example {
+  name: 422 Response
+  description: Validation Error
+  
+  request: {
+    url: {{baseUrl}}/api/v1/signup/:provider
+    method: GET
+    mode: none
+    params:query: {
+      ~state: 
+    }
+  
+    params:path: {
+      provider: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 422
+      text: Unprocessable Entity
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "detail": [
+            {
+              "loc": [],
+              "msg": "",
+              "type": ""
+            }
+          ]
+        }
+      '''
+    }
+  }
+}

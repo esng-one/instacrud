@@ -1,0 +1,40 @@
+meta {
+  name: Get Usage Stats
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/v1/usage/stats
+  body: none
+  auth: inherit
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/usage/stats
+    method: GET
+    mode: none
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+  
+      '''
+    }
+  }
+}

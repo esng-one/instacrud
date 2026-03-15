@@ -1,0 +1,149 @@
+name: VPS Deployment on Release Tag
+
+on:
+  push:
+    tags:
+      # Only full semantic versions (1.0.0, 2.1.3) - NOT pre-releases (1.0.0-rc1, 1.0.0-beta)
+      - '[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+
+env:
+  DEPLOY_PATH: /opt/instacrud
+  REPO_PATH: /esng-one/instacrud.git
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: vps
+
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -e
+
+            echo "=== VPS Deployment Started ==="
+            echo "Tag: ${{ github.ref_name }}"
+
+            # --- Install Git if not present ---
+            if ! command -v git &> /dev/null; then
+              echo "Installing Git..."
+              sudo apt-get update
+              sudo apt-get install -y git
+            else
+              echo "Git already installed: $(git --version)"
+            fi
+
+            # --- Install Docker if not present ---
+            if ! command -v docker &> /dev/null; then
+              echo "Installing Docker..."
+              curl -fsSL https://get.docker.com | sh
+              sudo usermod -aG docker $USER
+              # Apply group changes for current session
+              newgrp docker || true
+            else
+              echo "Docker already installed: $(docker --version)"
+            fi
+
+            # --- Install Docker Compose plugin if not present ---
+            if ! docker compose version &> /dev/null; then
+              echo "Installing Docker Compose plugin..."
+              sudo apt-get update
+              sudo apt-get install -y docker-compose-plugin
+            else
+              echo "Docker Compose already installed: $(docker compose version)"
+            fi
+
+            # --- Clone or Update Repository ---
+            if [ -n "${{ secrets.GH_PAT }}" ]; then
+              REPO_URL="https://${{ secrets.GH_PAT }}@github.com${{ env.REPO_PATH }}"
+            else
+              REPO_URL="https://github.com${{ env.REPO_PATH }}"
+            fi
+
+            if [ -d "${{ env.DEPLOY_PATH }}/.git" ]; then
+              echo "Repository exists, updating..."
+              cd ${{ env.DEPLOY_PATH }}
+              git remote set-url origin "$REPO_URL"
+              git fetch origin ${{ github.ref_name }}
+              git reset --hard origin/${{ github.ref_name }} 2>/dev/null || git reset --hard ${{ github.ref_name }}
+            elif [ -d "${{ env.DEPLOY_PATH }}" ]; then
+              echo "Directory exists but not a git repo, initializing..."
+              cd ${{ env.DEPLOY_PATH }}
+              git init
+              git remote add origin "$REPO_URL"
+              git fetch --all --tags
+              # Use origin/ prefix for branches, fallback to direct ref for tags
+              git reset --hard origin/${{ github.ref_name }} 2>/dev/null || git reset --hard ${{ github.ref_name }}
+            else
+              echo "Fresh install, cloning repository..."
+              sudo mkdir -p ${{ env.DEPLOY_PATH }}
+              sudo chown $USER:$USER ${{ env.DEPLOY_PATH }}
+              git clone "$REPO_URL" ${{ env.DEPLOY_PATH }}
+              cd ${{ env.DEPLOY_PATH }}
+              git checkout ${{ github.ref_name }}
+            fi
+
+            # --- Export environment variables for Docker Compose ---
+            export SSL_ENABLED="${{ vars.SSL_ENABLED || 'true' }}"
+            export DOMAIN="${{ vars.DOMAIN }}"
+            export ADMIN_EMAIL="${{ vars.ADMIN_EMAIL }}"
+            # Derive BASE_URL from DOMAIN (https if SSL, http otherwise)
+            if [ "$SSL_ENABLED" = "true" ]; then
+              export BASE_URL="https://${DOMAIN}"
+            else
+              export BASE_URL="http://${DOMAIN}"
+            fi
+            export MONGO_PASSWORD="${{ secrets.MONGO_PASSWORD }}"
+            export SECRET_KEY="${{ secrets.SECRET_KEY }}"
+            export GOOGLE_CLIENT_ID="${{ vars.GOOGLE_CLIENT_ID }}"
+            export GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}"
+            export MS_CLIENT_ID="${{ vars.MS_CLIENT_ID }}"
+            export MS_CLIENT_SECRET="${{ secrets.MS_CLIENT_SECRET }}"
+            export MS_TENANT_ID="${{ vars.MS_TENANT_ID }}"
+            export TURNSTILE_SITE_KEY="${{ vars.TURNSTILE_SITE_KEY }}"
+            export TURNSTILE_SECRET_KEY="${{ secrets.TURNSTILE_SECRET_KEY }}"
+            export EMAIL_ENABLED="${{ vars.EMAIL_ENABLED }}"
+            export EMAIL_CARRIER="${{ vars.EMAIL_CARRIER }}"
+            export BREVO_API_KEY="${{ secrets.BREVO_API_KEY }}"
+            export EMAIL_FROM_ADDRESS="${{ vars.EMAIL_FROM_ADDRESS }}"
+            export EMAIL_FROM_NAME="${{ vars.EMAIL_FROM_NAME }}"
+            export DEEP_INFRA_KEY="${{ secrets.DEEP_INFRA_KEY }}"
+            export TURNSTILE_MODE="${{ vars.TURNSTILE_MODE }}"
+            export OPEN_REGISTRATION="${{ vars.OPEN_REGISTRATION }}"
+            export SUGGEST_LOADING_MOCK_DATA="${{ vars.SUGGEST_LOADING_MOCK_DATA }}"
+            export SUGGEST_LOADING_MOCK_DATA_DEFAULT="${{ vars.SUGGEST_LOADING_MOCK_DATA_DEFAULT }}"
+            export DEFAULT_TIER_CODE="${{ vars.DEFAULT_TIER_CODE }}"
+
+            # --- Build and Deploy ---
+            echo "Building containers..."
+            docker compose -f docker-compose.vps.yml build
+
+            echo "Starting services..."
+            if [ "$SSL_ENABLED" = "true" ]; then
+              docker compose -f docker-compose.vps.yml --profile ssl up -d
+            else
+              docker compose -f docker-compose.vps.yml up -d
+            fi
+
+            # --- Cleanup old images ---
+            echo "Cleaning up unused Docker images..."
+            docker image prune -f
+
+            # --- Health Check ---
+            echo "Waiting for services to start..."
+            sleep 10
+
+            echo "Service status:"
+            if [ "$SSL_ENABLED" = "true" ]; then
+              docker compose -f docker-compose.vps.yml --profile ssl ps
+            else
+              docker compose -f docker-compose.vps.yml ps
+            fi
+
+            echo "=== VPS Deployment Completed ==="

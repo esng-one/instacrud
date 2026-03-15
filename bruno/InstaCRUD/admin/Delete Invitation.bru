@@ -1,0 +1,89 @@
+meta {
+  name: Delete Invitation
+  type: http
+  seq: 13
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/admin/invitations/:invitation_id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  invitation_id: 
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/admin/invitations/:invitation_id
+    method: DELETE
+    mode: none
+    params:path: {
+      invitation_id: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "message": ""
+        }
+      '''
+    }
+  }
+}
+
+example {
+  name: 422 Response
+  description: Validation Error
+  
+  request: {
+    url: {{baseUrl}}/api/v1/admin/invitations/:invitation_id
+    method: DELETE
+    mode: none
+    params:path: {
+      invitation_id: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 422
+      text: Unprocessable Entity
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "detail": [
+            {
+              "loc": [],
+              "msg": "",
+              "type": ""
+            }
+          ]
+        }
+      '''
+    }
+  }
+}

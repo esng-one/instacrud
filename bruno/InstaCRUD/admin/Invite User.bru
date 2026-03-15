@@ -1,0 +1,117 @@
+meta {
+  name: Invite User
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/api/v1/admin/invite_user
+  body: json
+  auth: inherit
+}
+
+headers {
+  ~CF-Turnstile-Token: 
+}
+
+body:json {
+  {
+    "email": "",
+    "role": "",
+    "organization_id": "",
+    "expires_in_seconds": 0
+  }
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/admin/invite_user
+    method: POST
+    mode: json
+    headers: {
+      ~CF-Turnstile-Token: 
+    }
+  
+    body:json: {
+      {
+        "email": "",
+        "role": "",
+        "organization_id": "",
+        "expires_in_seconds": 0
+      }
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "message": "",
+          "invitation_id": ""
+        }
+      '''
+    }
+  }
+}
+
+example {
+  name: 422 Response
+  description: Validation Error
+  
+  request: {
+    url: {{baseUrl}}/api/v1/admin/invite_user
+    method: POST
+    mode: json
+    headers: {
+      ~CF-Turnstile-Token: 
+    }
+  
+    body:json: {
+      {
+        "email": "",
+        "role": "",
+        "organization_id": "",
+        "expires_in_seconds": 0
+      }
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 422
+      text: Unprocessable Entity
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "detail": [
+            {
+              "loc": [],
+              "msg": "",
+              "type": ""
+            }
+          ]
+        }
+      '''
+    }
+  }
+}

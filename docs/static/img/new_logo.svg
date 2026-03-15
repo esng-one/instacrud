@@ -1,0 +1,7 @@
+<svg width="260" height="60" viewBox="0 0 260 60" xmlns="http://www.w3.org/2000/svg">
+  <rect x="5" y="8" width="46" height="44" rx="8" stroke="#000" stroke-width="6" fill="none"></rect>
+  <rect x="16" y="26" width="24" height="4" fill="#000"></rect>
+  <text x="70" y="40" font-family="Inter, sans-serif" font-weight="600" font-size="28" fill="#000">
+    InstaCRUD
+  </text>
+</svg>

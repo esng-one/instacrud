@@ -1,0 +1,157 @@
+:root {
+  --doc-sidebar-width: 260px;
+  --ifm-color-primary: #465fff;
+  --ifm-color-primary-dark: #2a31d8;
+  --ifm-color-primary-darker: #252dae;
+  --ifm-color-primary-darkest: #161950;
+
+  --ifm-color-primary-light: #7592ff;
+  --ifm-color-primary-lighter: #9cb9ff;
+  --ifm-color-primary-lightest: #c2d6ff;
+
+  --ifm-background-color: #ffffff;
+  --ifm-font-color-base: #344054;
+
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(70, 95, 255, 0.1);
+}
+
+[data-theme="dark"] {
+  --ifm-color-primary: #7592ff;
+  --ifm-color-primary-dark: #465fff;
+  --ifm-color-primary-darker: #3641f5;
+  --ifm-color-primary-darkest: #2a31d8;
+
+  --ifm-color-primary-light: #9cb9ff;
+  --ifm-color-primary-lighter: #c2d6ff;
+  --ifm-color-primary-lightest: #dde9ff;
+
+  --ifm-background-color: #101828;
+  --ifm-font-color-base: #d0d5dd;
+
+  --docusaurus-highlighted-code-line-bg: rgba(117, 146, 255, 0.2);
+}
+
+/* Navbar styling to match landing page */
+.navbar {
+  background-color: #ffffff;
+  box-shadow: none;
+  border-bottom: 1px solid #e4e7ec;
+}
+
+.navbar__title {
+  color: #101828;
+  font-weight: 600;
+}
+
+.navbar__link {
+  color: #101828;
+  font-weight: 500;
+}
+
+.navbar__link:hover,
+.navbar__link--active {
+  color: #465fff;
+}
+
+[data-theme="dark"] .navbar {
+  background-color: #101828;
+  border-bottom: 1px solid #344054;
+}
+
+[data-theme="dark"] .navbar__title {
+  color: #ffffff;
+}
+
+[data-theme="dark"] .navbar__link {
+  color: #ffffff;
+}
+
+[data-theme="dark"] .navbar__link:hover,
+[data-theme="dark"] .navbar__link--active {
+  color: #7592ff;
+}
+
+/* Hide external link icon */
+.navbar__link--no-icon svg {
+  display: none;
+}
+
+.navbar__link--no-icon::after {
+  display: none !important;
+}
+
+/* Footer styling to match landing page */
+.footer {
+  background-color: #465fff;
+  padding: 1.75rem 0;
+}
+
+.footer__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.footer__copyright-text {
+  color: #ffffff;
+}
+
+.footer__linkedin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ffffff;
+  text-decoration: none;
+  transition: opacity 0.3s;
+}
+
+.footer__linkedin:hover {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+}
+
+[data-theme="dark"] .footer {
+  background-color: #101828;
+}
+
+/* GitHub link styling */
+.header-github-link {
+  display: flex !important;
+  align-items: center;
+}
+
+.header-github-link::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  flex-shrink: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23101828' d='M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12'/%3E%3C/svg%3E")
+    no-repeat center;
+  margin-right: 0.5rem;
+}
+
+[data-theme="dark"] .header-github-link::before {
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23ffffff' d='M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12'/%3E%3C/svg%3E")
+    no-repeat center;
+}
+
+.header-github-link:hover::before {
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23465fff' d='M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12'/%3E%3C/svg%3E")
+    no-repeat center;
+}
+
+[data-theme="dark"] .header-github-link:hover::before {
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%237592ff' d='M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12'/%3E%3C/svg%3E")
+    no-repeat center;
+}
+
+.header-github-link::after {
+  display: none !important;
+}
+
+.header-github-link svg {
+  display: none !important;
+}

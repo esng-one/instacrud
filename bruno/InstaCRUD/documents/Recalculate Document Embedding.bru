@@ -1,0 +1,87 @@
+meta {
+  name: Recalculate Document Embedding
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/documents/:document_id/recalculate-embedding
+  body: none
+  auth: inherit
+}
+
+params:path {
+  document_id: 
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/documents/:document_id/recalculate-embedding
+    method: POST
+    mode: none
+    params:path: {
+      document_id: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+  
+      '''
+    }
+  }
+}
+
+example {
+  name: 422 Response
+  description: Validation Error
+  
+  request: {
+    url: {{baseUrl}}/api/v1/documents/:document_id/recalculate-embedding
+    method: POST
+    mode: none
+    params:path: {
+      document_id: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 422
+      text: Unprocessable Entity
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "detail": [
+            {
+              "loc": [],
+              "msg": "",
+              "type": ""
+            }
+          ]
+        }
+      '''
+    }
+  }
+}

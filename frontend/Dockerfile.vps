@@ -1,0 +1,52 @@
+# Base dependencies
+FROM node:22-alpine AS base
+
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+RUN npm install --global pm2
+COPY package*.json ./
+RUN npm ci
+
+# Build stage
+FROM base AS builder
+WORKDIR /app
+COPY . .
+
+# Required at build time (Next.js public env)
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Fail fast if not provided
+RUN if [ -z "$NEXT_PUBLIC_API_BASE_URL" ]; then \
+      echo "ERROR: NEXT_PUBLIC_API_BASE_URL must be provided at build time"; \
+      exit 1; \
+    fi
+
+RUN echo "build-time NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL"
+RUN npm run build
+
+# Runtime image
+FROM node:22-alpine AS runtime
+WORKDIR /app
+
+RUN npm install --global pm2
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Non-root user
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001
+USER nextjs
+
+# Copy standalone output
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+
+EXPOSE 3000
+
+# Start Next.js with PM2 for process management
+CMD [ "pm2-runtime", "node", "--", "server.js" ]
