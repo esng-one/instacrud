@@ -3,8 +3,8 @@ name: VPS Deployment on Release Tag
 on:
   push:
     tags:
-      # Only full semantic versions (1.0.0, 2.1.3) - NOT pre-releases (1.0.0-rc1, 1.0.0-beta)
-      - '[0-9]+.[0-9]+.[0-9]+'
+      # Only full semantic versions (v1.0.0, v2.1.3) - NOT pre-releases (v1.0.0-rc1, v1.0.0-beta)
+      - 'v[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
 
 env:
