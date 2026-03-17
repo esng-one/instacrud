@@ -14,7 +14,7 @@ import { useTailwindMuiTheme } from "@/app/lib/util";
 
 import useUserRole from "@/hooks/useUserRole";
 import { AiModelsService } from "@/api/services/AiModelsService";
-import type { AiModel } from "@/api/models/AiModel";
+import type { AiModel_Input as AiModel } from "@/api/models/AiModel_Input";
 
 import AiModelGrid from "@/components/entity/aimodel/AiModelGrid";
 import AiModelDetailView from "@/components/entity/aimodel/AiModelDetailView";

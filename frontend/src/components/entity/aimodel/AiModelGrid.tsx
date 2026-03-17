@@ -3,7 +3,7 @@
 "use client";
 import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { EntityGrid } from "@/components/entity/EntityGrid";
-import type { AiModel } from "@/api/models/AiModel";
+import type { AiModel_Input as AiModel } from "@/api/models/AiModel_Input";
 import { formatEnum } from "@/app/lib/util";
 
 interface AiModelGridProps {

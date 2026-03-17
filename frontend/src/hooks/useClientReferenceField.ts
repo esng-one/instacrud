@@ -2,7 +2,7 @@
 import { useCallback } from "react";
 import { useReferenceField } from "@/hooks/useReferenceField";
 import { ClientsService } from "@/api/services/ClientsService";
-import type { Client } from "@/api/models/Client";
+import type { Client_Input as Client } from "@/api/models/Client_Input";
 
 export function useClientReferenceField() {
   const fetchClients = useCallback(

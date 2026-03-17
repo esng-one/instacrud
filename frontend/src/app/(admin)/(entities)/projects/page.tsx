@@ -14,7 +14,7 @@ import { useTailwindMuiTheme } from "@/app/lib/util";
 import { getApiErrorInfo } from "@/app/lib/api-error";
 
 import { ProjectsService } from "@/api/services/ProjectsService";
-import type { Project } from "@/api/models/Project";
+import type { Project_Input as Project } from "@/api/models/Project_Input";
 
 import ProjectGrid from "@/components/entity/project/ProjectGrid";
 import ProjectDetailView from "@/components/entity/project/ProjectDetailView";

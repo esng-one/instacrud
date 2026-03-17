@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import type { ProjectDocument } from "@/api/models/ProjectDocument";
+import type { ProjectDocument_Input as ProjectDocument } from "@/api/models/ProjectDocument_Input";
 
 function EmbeddingHeatmap({ embedding }: { embedding: number[] | null | undefined }) {
   if (!embedding || embedding.length === 0) {

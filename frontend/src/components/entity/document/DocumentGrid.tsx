@@ -13,7 +13,7 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
-import type { ProjectDocument } from "@/api/models/ProjectDocument";
+import type { ProjectDocument_Input as ProjectDocument } from "@/api/models/ProjectDocument_Input";
 
 interface DocumentGridProps {
   rows: ProjectDocument[];

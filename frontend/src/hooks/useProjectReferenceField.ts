@@ -2,7 +2,7 @@
 import { useCallback } from "react";
 import { useReferenceField } from "@/hooks/useReferenceField";
 import { ProjectsService } from "@/api/services/ProjectsService";
-import type { Project } from "@/api/models/Project";
+import type { Project_Input as Project } from "@/api/models/Project_Input";
 
 interface UseProjectReferenceOptions {
   skip?: number;

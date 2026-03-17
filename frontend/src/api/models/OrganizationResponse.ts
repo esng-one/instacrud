@@ -7,7 +7,7 @@ export type OrganizationResponse = {
     name: string;
     code: string;
     description?: (string | null);
-    status: string;
+    status?: string;
     tier_id?: (string | null);
     local_only_conversations?: boolean;
 };

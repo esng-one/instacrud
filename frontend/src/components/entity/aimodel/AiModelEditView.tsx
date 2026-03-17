@@ -3,7 +3,7 @@
 import React from "react";
 import { EntityEditView } from "@/components/entity/EntityEditView";
 import { formatEnum } from "@/app/lib/util";
-import type { AiModel } from "@/api/models/AiModel";
+import type { AiModel_Input as AiModel } from "@/api/models/AiModel_Input";
 import { AiServiceProvider } from "@/api/models/AiServiceProvider";
 
 interface AiModelEditViewProps {

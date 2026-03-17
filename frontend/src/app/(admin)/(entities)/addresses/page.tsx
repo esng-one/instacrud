@@ -14,7 +14,7 @@ import { useTailwindMuiTheme } from "@/app/lib/util";
 import { getApiErrorInfo } from "@/app/lib/api-error";
 
 import { AddressesService } from "@/api/services/AddressesService";
-import type { Address } from "@/api/models/Address";
+import type { Address_Input as Address } from "@/api/models/Address_Input";
 
 import AddressGrid from "@/components/entity/address/AddressGrid";
 import AddressDetailView from "@/components/entity/address/AddressDetailView";

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { EntityDetailView } from "@/components/entity/EntityDetailView";
-import type { Address } from "@/api/models/Address";
+import type { Address_Input as Address } from "@/api/models/Address_Input";
 
 export const detailFields: { 
   label: string; 

@@ -4,7 +4,7 @@ import React from "react";
 import { EntityEditView } from "@/components/entity/EntityEditView";
 import type { OrganizationResponse } from "@/api/models/OrganizationResponse";
 import type { OrganizationCreate } from "@/api/models/OrganizationCreate";
-import type { Tier } from "@/api/models/Tier";
+import type { Tier_Input as Tier } from "@/api/models/Tier_Input";
 import { useTierReferenceField } from "@/hooks/useTierReferenceField";
 import useUserRole from "@/hooks/useUserRole";
 

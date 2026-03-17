@@ -2,7 +2,7 @@
 import { useCallback } from "react";
 import { useReferenceField } from "./useReferenceField";
 import { ContactsService } from "@/api/services/ContactsService";
-import type { Contact } from "@/api/models/Contact";
+import type { Contact_Input as Contact } from "@/api/models/Contact_Input";
 
 export function useContactReferenceField() {
   const fetchContacts = useCallback(

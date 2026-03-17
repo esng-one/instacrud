@@ -2,7 +2,7 @@
 
 import { GridColDef } from "@mui/x-data-grid";
 import { EntityGrid } from "@/components/entity/EntityGrid";
-import type { Address } from "@/api/models/Address";
+import type { Address_Input as Address } from "@/api/models/Address_Input";
 
 const addressColumns: GridColDef[] = [
   { field: "street", headerName: "Street", flex: 1, minWidth: 150 },

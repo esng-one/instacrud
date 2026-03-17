@@ -1,7 +1,7 @@
 // components/entity/client/ClientGrid.tsx
 import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { EntityGrid } from "@/components/entity/EntityGrid";
-import type { Client } from "@/api/models/Client";
+import type { Client_Input as Client } from "@/api/models/Client_Input";
 import { formatEnum, formatDate } from "@/app/lib/util";
 
 const clientColumns: GridColDef<Client>[] = [

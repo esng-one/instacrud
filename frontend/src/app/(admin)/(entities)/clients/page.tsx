@@ -17,9 +17,9 @@ import { ClientsService } from "@/api/services/ClientsService";
 import { ContactsService } from "@/api/services/ContactsService";
 import { AddressesService } from "@/api/services/AddressesService";
 import { ClientType } from "@/api/models/ClientType";
-import type { Client } from "@/api/models/Client";
-import type { Contact } from "@/api/models/Contact";
-import type { Address } from "@/api/models/Address";
+import type { Client_Input as Client } from "@/api/models/Client_Input";
+import type { Contact_Input as Contact } from "@/api/models/Contact_Input";
+import type { Address_Input as Address } from "@/api/models/Address_Input";
 
 import ClientGrid from "@/components/entity/client/ClientGrid";
 import ClientEditView from "@/components/entity/client/ClientEditView";

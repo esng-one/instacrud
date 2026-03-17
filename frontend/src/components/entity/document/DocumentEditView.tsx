@@ -2,8 +2,8 @@
 
 import React from "react";
 import { EntityEditView } from "@/components/entity/EntityEditView";
-import type { Project } from "@/api/models/Project";
-import { ProjectDocument, ProjectDocumentRequired } from "@/api/models/ProjectDocument";
+import type { Project_Input as Project } from "@/api/models/Project_Input";
+import { ProjectDocument_Input as ProjectDocument, ProjectDocument_InputRequired as ProjectDocumentRequired } from "@/api/models/ProjectDocument_Input";
 import { useProjectReferenceField } from "@/hooks/useProjectReferenceField";
 import { applyRequiredFlags } from "@/app/lib/type-utils";
 

@@ -1,9 +1,9 @@
 // components/entity/project/ProjectDetailView.tsx
 import React, { useEffect, useState, useMemo } from "react";
 import { DetailField, EntityDetailView } from "@/components/entity/EntityDetailView";
-import type { Project } from "@/api/models/Project";
-import type { Client } from "@/api/models/Client";
-import type { ProjectDocument } from "@/api/models/ProjectDocument";
+import type { Project_Input as Project } from "@/api/models/Project_Input";
+import type { Client_Input as Client } from "@/api/models/Client_Input";
+import type { ProjectDocument_Input as ProjectDocument } from "@/api/models/ProjectDocument_Input";
 import Link from "next/link";
 import { ClientsService } from "@/api/services/ClientsService";
 import { DocumentsService } from "@/api/services/DocumentsService";

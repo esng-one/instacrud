@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { AiModelsService } from "@/api/services/AiModelsService";
-import { AiModel } from "@/api/models/AiModel";
+import { AiModel_Input as AiModel } from "@/api/models/AiModel_Input";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { isModelAccessible } from "../components/ModelSelect";
 

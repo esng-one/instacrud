@@ -1,6 +1,6 @@
 import React from "react";
 import { EntityEditView } from "@/components/entity/EntityEditView";
-import { Contact, ContactRequired } from "@/api/models/Contact";
+import { Contact_Input as Contact, Contact_InputRequired as ContactRequired } from "@/api/models/Contact_Input";
 import { applyRequiredFlags } from "@/app/lib/type-utils";
 
 const baseFields = [

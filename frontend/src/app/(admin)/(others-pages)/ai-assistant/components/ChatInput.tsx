@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useImperativeHandle, forwardRef, useCallback } from "react";
 import toast from "react-hot-toast";
 import { imageToBase64 } from "../utils/imageUtils";
-import { AiModel } from "@/api/models/AiModel";
+import { AiModel_Input as AiModel } from "@/api/models/AiModel_Input";
 import useSpeechToText from "@/hooks/useSpeechRecognition";
 
 interface ChatInputProps {
