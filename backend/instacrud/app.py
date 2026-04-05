@@ -14,7 +14,7 @@ from pymongo.errors import DuplicateKeyError
 from pydantic import ValidationError as PydanticValidationError
 from loguru import logger
 
-from instacrud.api import organization_api, system_api, oauth_api, calendar_api, ai_api
+from instacrud.api import organization_api, system_api, oauth_api, calendar_api, ai_api, me_api
 from instacrud.api.middleware import register_middlewares
 from instacrud.api.validators import handle_duplicate_key
 from instacrud.database import init_system_db
@@ -118,6 +118,7 @@ app.include_router(organization_api.router, prefix="/api/v1")
 app.include_router(oauth_api.router, prefix="/api/v1")
 app.include_router(calendar_api.router, prefix="/api/v1")
 app.include_router(ai_api.router, prefix="/api/v1")
+app.include_router(me_api.router, prefix="/api/v1")
 
 if __name__ == "__main__":
     uvicorn.run("instacrud.app:app", host="0.0.0.0", port=8000, reload=True)

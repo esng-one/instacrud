@@ -1,34 +1,22 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import AvatarText from "../ui/avatar/AvatarText";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { logout } from "@/app/lib/util";
 import { useRouter } from "next/navigation";
+import useMe from "@/hooks/useMe";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
+  const { me } = useMe();
 
-  const [userName, setUserName] = useState("User");
-  const [userEmail, setUserEmail] = useState("unknown@example.com");
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = JSON.parse(localStorage.getItem("user.info") || "{}");
-        if (stored.name) setUserName(stored.name);
-        if (stored.email) setUserEmail(stored.email);
-        if (stored.role) setUserRole(stored.role);
-        if (stored.organization_id) setOrganizationId(stored.organization_id);
-      } catch {
-        // fallback silently
-      }
-    }
-  }, []);
+  const userName = me?.user.name ?? "User";
+  const userEmail = me?.user.email ?? "unknown@example.com";
+  const userRole = me?.user.role ?? null;
+  const organizationId = me?.organization?.id ?? null;
   
   function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     e.stopPropagation();

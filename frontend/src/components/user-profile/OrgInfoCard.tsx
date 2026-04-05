@@ -1,32 +1,8 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import useCurrentUser from "@/hooks/useCurrentUser";
-import { AdminService } from "@/api/services/AdminService";
-
-interface OrganizationInfo {
-  id: string;
-  name: string;
-  description?: string | null;
-}
+import useMe from "@/hooks/useMe";
 
 export default function OrgInfoCard() {
-  const { currentUser, isLoading } = useCurrentUser();
-  const [organizationInfo, setOrganizationInfo] = useState<OrganizationInfo | null>(null);
-
-  useEffect(() => {
-    const fetchOrganizationInfo = async () => {
-      if (currentUser?.organization_id) {
-        try {
-          const orgData = await AdminService.getOrganizationAdminOrganizationsOrganizationIdGet(currentUser.organization_id);
-          setOrganizationInfo(orgData);
-        } catch (error) {
-          console.error("Failed to fetch organization info:", error);
-        }
-      }
-    };
-
-    fetchOrganizationInfo();
-  }, [currentUser?.organization_id]);
+  const { me, isLoading } = useMe();
 
   if (isLoading) {
     return (
@@ -48,7 +24,7 @@ export default function OrgInfoCard() {
     );
   }
 
-  if (!organizationInfo) {
+  if (!me?.organization) {
     return (
       <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
         <div className="flex flex-col gap-6">
@@ -79,7 +55,7 @@ export default function OrgInfoCard() {
                 Organization Name
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {organizationInfo.name}
+                {me.organization.name}
               </p>
             </div>
 
@@ -88,7 +64,7 @@ export default function OrgInfoCard() {
                 Description
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {organizationInfo.description || 'No description available'}
+                {me.organization.description || 'No description available'}
               </p>
             </div>
           </div>

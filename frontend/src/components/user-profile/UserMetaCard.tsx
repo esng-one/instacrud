@@ -1,11 +1,9 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import useCurrentUser from "@/hooks/useCurrentUser";
-import { AdminService } from "@/api/services/AdminService";
+import React from "react";
+import useMe from "@/hooks/useMe";
 
 export default function UserMetaCard() {
-  const { currentUser, isLoading } = useCurrentUser();
-  const [organizationName, setOrganizationName] = useState<string>("");
+  const { me, isLoading } = useMe();
 
   // Function to generate a consistent color based on the user's name
   const generateAvatarColor = (name: string) => {
@@ -31,21 +29,6 @@ export default function UserMetaCard() {
     return colors[Math.abs(hash) % colors.length];
   };
 
-  useEffect(() => {
-    const fetchOrganizationInfo = async () => {
-      if (currentUser?.organization_id) {
-        try {
-          const orgData = await AdminService.getOrganizationAdminOrganizationsOrganizationIdGet(currentUser.organization_id);
-          setOrganizationName(orgData.name);
-        } catch (error) {
-          console.error("Failed to fetch organization info:", error);
-        }
-      }
-    };
-
-    fetchOrganizationInfo();
-  }, [currentUser?.organization_id]);
-
   if (isLoading) {
     return (
       <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
@@ -60,19 +43,19 @@ export default function UserMetaCard() {
     );
   }
 
-  const nameParts = currentUser?.name?.split(' ') || [];
+  const nameParts = me?.user.name?.split(' ') || [];
   const firstName = nameParts[0] || '';
   const lastName = nameParts.slice(1).join(' ') || '';
-  
+
   // Get initials for avatar
   const getInitials = (firstName: string, lastName: string) => {
     const firstInitial = firstName.charAt(0).toUpperCase();
     const lastInitial = lastName.charAt(0).toUpperCase();
     return firstInitial + lastInitial;
   };
-  
+
   const initials = getInitials(firstName, lastName);
-  const avatarColor = generateAvatarColor(currentUser?.name || '');
+  const avatarColor = generateAvatarColor(me?.user.name || '');
 
   return (
     <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
@@ -87,9 +70,9 @@ export default function UserMetaCard() {
             <h4 className="mb-2 text-xl font-bold text-center text-gray-800 dark:text-white/90 xl:text-left">
               {firstName} {lastName}
             </h4>
-            {organizationName && (
+            {me?.organization?.name && (
               <p className="text-sm text-center text-gray-500 dark:text-gray-400 xl:text-left">
-                {organizationName}
+                {me.organization.name}
               </p>
             )}
           </div>

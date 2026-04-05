@@ -1,7 +1,6 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import useCurrentUser from "@/hooks/useCurrentUser";
-import { AdminService } from "@/api/services/AdminService";
+import React, { useState } from "react";
+import useMe from "@/hooks/useMe";
 import { SystemService } from "@/api/services/SystemService";
 import { formatEnum, useTailwindMuiTheme } from "@/app/lib/util";
 import Button from "@/components/ui/button/Button";
@@ -16,10 +15,9 @@ import { useRouter } from "next/navigation";
 import { logout } from "@/app/lib/util";
 
 export default function UserInfoCard() {
-  const { currentUser, isLoading } = useCurrentUser();
+  const { me, isLoading } = useMe();
   const router = useRouter();
   const theme = useTailwindMuiTheme();
-  const [organizationName, setOrganizationName] = useState<string>("");
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -28,21 +26,6 @@ export default function UserInfoCard() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    const fetchOrganizationInfo = async () => {
-      if (currentUser?.organization_id) {
-        try {
-          const orgData = await AdminService.getOrganizationAdminOrganizationsOrganizationIdGet(currentUser.organization_id);
-          setOrganizationName(orgData.name);
-        } catch (error) {
-          console.error("Failed to fetch organization info:", error);
-        }
-      }
-    };
-
-    fetchOrganizationInfo();
-  }, [currentUser?.organization_id]);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,10 +81,10 @@ export default function UserInfoCard() {
     );
   }
 
-  const nameParts = currentUser?.name?.split(' ') || [];
+  const nameParts = me?.user.name?.split(' ') || [];
   const firstName = nameParts[0] || '';
   const lastName = nameParts.slice(1).join(' ') || '';
-  const hasPassword = currentUser?.has_password ?? true;
+  const hasPassword = me?.user.has_password ?? true;
 
   return (
     <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
@@ -135,7 +118,7 @@ export default function UserInfoCard() {
                 Email Address
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {currentUser?.email || 'N/A'}
+                {me?.user.email || 'N/A'}
               </p>
             </div>
 
@@ -144,7 +127,7 @@ export default function UserInfoCard() {
                 Role
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {formatEnum(currentUser?.role ?? "")}
+                {formatEnum(me?.user.role ?? "")}
               </p>
             </div>
 
@@ -153,7 +136,7 @@ export default function UserInfoCard() {
                 Organization Name
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {organizationName || 'N/A'}
+                {me?.organization?.name || 'N/A'}
               </p>
             </div>
           </div>
