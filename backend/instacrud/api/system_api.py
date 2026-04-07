@@ -705,14 +705,13 @@ async def signup(
     load_mock_data: Optional[bool] = None
 ):
 
+    if not settings.OPEN_REGISTRATION and not data.invitation_id:
+        raise HTTPException(status_code=403, detail="Open registration is disabled. Invitation ID is required.")
+
     # Check if user already exists
     existing_user = await User.find_one({"email": data.email.lower()})
     if existing_user:
         raise HTTPException(status_code=409, detail="User already exists in the organization")
-
-    
-    if not settings.OPEN_REGISTRATION and not data.invitation_id:
-        raise HTTPException(status_code=409, detail="Open registration is disabled. Invitation ID is required.")
 
     if settings.OPEN_REGISTRATION and not data.invitation_id:
         if not organization_name:
