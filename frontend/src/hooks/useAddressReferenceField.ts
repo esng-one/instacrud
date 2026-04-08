@@ -2,7 +2,7 @@
 import { useCallback } from "react";
 import { useReferenceField } from "./useReferenceField";
 import { AddressesService } from "@/api/services/AddressesService";
-import type { Address } from "@/api/models/Address";
+import type { Address_Input as Address } from "@/api/models/Address_Input";
 
 export function useAddressReferenceField() {
   const fetchAddresses = useCallback(

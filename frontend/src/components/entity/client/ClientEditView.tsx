@@ -1,7 +1,7 @@
 // components/entity/client/ClientEditView.tsx
 import React from "react";
 import { EntityEditView } from "@/components/entity/EntityEditView";
-import { Client, ClientRequired } from "@/api/models/Client";
+import { Client_Input as Client, Client_InputRequired as ClientRequired } from "@/api/models/Client_Input";
 import { ClientType } from "@/api/models/ClientType";
 import { formatEnum } from "@/app/lib/util";
 import {applyRequiredFlags} from "@/app/lib/type-utils";

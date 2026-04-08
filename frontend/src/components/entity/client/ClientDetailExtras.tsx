@@ -10,10 +10,10 @@ import { ProjectsService } from "@/api/services/ProjectsService";
 import { useProjectReferenceField } from "@/hooks/useProjectReferenceField";
 import { usePaginatedEntityList } from "@/hooks/usePaginatedEntityList";
 
-import type { Client } from "@/api/models/Client";
-import type { Contact } from "@/api/models/Contact";
-import type { Address } from "@/api/models/Address";
-import type { Project } from "@/api/models/Project";
+import type { Client_Input as Client } from "@/api/models/Client_Input";
+import type { Contact_Input as Contact } from "@/api/models/Contact_Input";
+import type { Address_Input as Address } from "@/api/models/Address_Input";
+import type { Project_Input as Project } from "@/api/models/Project_Input";
 import ProjectEditView from "../project/ProjectEditView";
 import { Modal } from "@/components/ui/modal";
 import Button from "@/components/ui/button/Button";

@@ -14,7 +14,7 @@ import { useTailwindMuiTheme } from "@/app/lib/util";
 import { getApiErrorInfo } from "@/app/lib/api-error";
 
 import { ContactsService } from "@/api/services/ContactsService";
-import type { Contact } from "@/api/models/Contact";
+import type { Contact_Input as Contact } from "@/api/models/Contact_Input";
 
 import ContactGrid from "@/components/entity/contact/ContactGrid";
 import ContactDetailView from "@/components/entity/contact/ContactDetailView";

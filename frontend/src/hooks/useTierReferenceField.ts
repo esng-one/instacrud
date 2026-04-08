@@ -2,7 +2,7 @@
 import { useCallback } from "react";
 import { useReferenceField } from "@/hooks/useReferenceField";
 import { TiersService } from "@/api/services/TiersService";
-import type { Tier } from "@/api/models/Tier";
+import type { Tier_Input as Tier } from "@/api/models/Tier_Input";
 
 export function useTierReferenceField() {
   const fetchTiers = useCallback(

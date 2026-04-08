@@ -3,7 +3,7 @@
 import React from "react";
 import { EntityDetailView } from "@/components/entity/EntityDetailView";
 import { formatEnum, formatDateTime } from "@/app/lib/util";
-import type { AiModel } from "@/api/models/AiModel";
+import type { AiModel_Input as AiModel } from "@/api/models/AiModel_Input";
 
 export const detailFields: {
   label: string;

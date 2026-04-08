@@ -2,8 +2,8 @@
 
 import React from "react";
 import { EntityEditView } from "@/components/entity/EntityEditView";
-import type { Client } from "@/api/models/Client";
-import { Project, ProjectRequired } from "@/api/models/Project";
+import type { Client_Input as Client } from "@/api/models/Client_Input";
+import { Project_Input as Project, Project_InputRequired as ProjectRequired } from "@/api/models/Project_Input";
 import { useClientReferenceField } from "@/hooks/useClientReferenceField";
 import {applyRequiredFlags} from "@/app/lib/type-utils";
 

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { EntityEditView } from "@/components/entity/EntityEditView";
-import { Address, AddressRequired } from "@/api/models/Address";
+import { Address_Input as Address, Address_InputRequired as AddressRequired } from "@/api/models/Address_Input";
 import {applyRequiredFlags} from "@/app/lib/type-utils";
 
 const baseFields = [

@@ -1,6 +1,6 @@
 import React from "react";
 import { EyeSlashIcon, PlusIcon, LightBulbIcon } from "@heroicons/react/24/outline";
-import { AiModel } from "@/api/models/AiModel";
+import { AiModel_Input as AiModel } from "@/api/models/AiModel_Input";
 import { ConversationHistory } from "./ConversationHistory";
 import { ModelSelect } from "./ModelSelect";
 import type { LocalConversation } from "@/db/conversationsDb";

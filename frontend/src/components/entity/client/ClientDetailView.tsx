@@ -2,7 +2,7 @@
 "use client";
 import React from "react";
 import { EntityDetailView } from "@/components/entity/EntityDetailView";
-import type { Client } from "@/api/models/Client";
+import type { Client_Input as Client } from "@/api/models/Client_Input";
 import { formatEnum } from "@/app/lib/util";
 
 export const detailFields: {

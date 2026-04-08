@@ -2,7 +2,7 @@
 
 import React from "react";
 import { EntityEditView } from "@/components/entity/EntityEditView";
-import type { Tier } from "@/api/models/Tier";
+import type { Tier_Input as Tier } from "@/api/models/Tier_Input";
 
 interface TierEditViewProps {
   item: Tier;

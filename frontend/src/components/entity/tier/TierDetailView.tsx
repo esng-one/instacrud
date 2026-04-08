@@ -3,7 +3,7 @@
 import React from "react";
 import { EntityDetailView } from "@/components/entity/EntityDetailView";
 import { formatDateTime } from "@/app/lib/util";
-import type { Tier } from "@/api/models/Tier";
+import type { Tier_Input as Tier } from "@/api/models/Tier_Input";
 
 export const detailFields: {
   label: string;

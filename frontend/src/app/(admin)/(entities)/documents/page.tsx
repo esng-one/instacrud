@@ -14,7 +14,7 @@ import { useTailwindMuiTheme } from "@/app/lib/util";
 import { getApiErrorInfo } from "@/app/lib/api-error";
 
 import { DocumentsService } from "@/api/services/DocumentsService";
-import type { ProjectDocument } from "@/api/models/ProjectDocument";
+import type { ProjectDocument_Input as ProjectDocument } from "@/api/models/ProjectDocument_Input";
 
 import DocumentGrid from "@/components/entity/document/DocumentGrid";
 import DocumentDetailView from "@/components/entity/document/DocumentDetailView";

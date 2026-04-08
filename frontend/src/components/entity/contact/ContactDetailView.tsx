@@ -1,6 +1,6 @@
 import React from "react";
 import { EntityDetailView } from "@/components/entity/EntityDetailView";
-import type { Contact } from "@/api/models/Contact";
+import type { Contact_Input as Contact } from "@/api/models/Contact_Input";
 
 export const detailFields: { label: string; field: keyof Contact; render?: (value: Contact[keyof Contact], item: Contact) => React.ReactNode }[] = [
   { label: "Title", field: "title" },

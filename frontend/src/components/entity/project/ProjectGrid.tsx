@@ -1,7 +1,7 @@
 // components/entity/project/ProjectGrid.tsx
 import { GridColDef } from "@mui/x-data-grid";
 import { EntityGrid } from "@/components/entity/EntityGrid";
-import type { Project } from "@/api/models/Project";
+import type { Project_Input as Project } from "@/api/models/Project_Input";
 import { formatDate } from "@/app/lib/util";
 
 const projectColumns: GridColDef<Project>[] = [

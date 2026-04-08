@@ -1,7 +1,7 @@
 // app/(admin)/(others-pages)/ai-assistant/hooks/useChatStream.ts
 import { useState, useRef, useCallback } from "react";
 import toast from "react-hot-toast";
-import { AiModel } from "@/api/models/AiModel";
+import { AiModel_Input as AiModel } from "@/api/models/AiModel_Input";
 import { conversationStorage } from "@/db/conversationStorage";
 import type { LocalConversation, Message } from "@/db/conversationsDb";
 import { syncConversationToServer } from "../utils/serverSync";

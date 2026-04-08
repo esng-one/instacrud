@@ -1,6 +1,6 @@
 import { GridColDef } from "@mui/x-data-grid";
 import { EntityGrid } from "@/components/entity/EntityGrid";
-import type { Contact } from "@/api/models/Contact";
+import type { Contact_Input as Contact } from "@/api/models/Contact_Input";
 
 const contactColumns: GridColDef[] = [
     { field: "name", headerName: "Name", flex: 1, minWidth: 150 },

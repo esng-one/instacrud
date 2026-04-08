@@ -3,7 +3,7 @@
 "use client";
 import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { EntityGrid } from "@/components/entity/EntityGrid";
-import type { Tier } from "@/api/models/Tier";
+import type { Tier_Input as Tier } from "@/api/models/Tier_Input";
 
 interface TierGridProps {
   rows: Tier[];
