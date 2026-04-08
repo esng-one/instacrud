@@ -482,7 +482,7 @@ class TestPreGuardrailDangerousFilters:
 
 
 def test_require_auth_blocks_when_tools_disabled():
-    with patch("ai.functions.crud.settings") as mock_settings:
+    with patch("instacrud.ai.functions.crud.settings") as mock_settings:
         mock_settings.ALLOW_AI_TOOLS = False
         mock_settings.ALLOW_AI_RW_ACCESS = True
         mock_settings.ALLOW_AI_SYSTEM_ACCESS = False
@@ -491,7 +491,7 @@ def test_require_auth_blocks_when_tools_disabled():
 
 
 def test_require_auth_blocks_when_no_context():
-    with patch("ai.functions.crud.settings") as mock_settings:
+    with patch("instacrud.ai.functions.crud.settings") as mock_settings:
         mock_settings.ALLOW_AI_TOOLS = True
         mock_settings.ALLOW_AI_RW_ACCESS = True
         mock_settings.ALLOW_AI_SYSTEM_ACCESS = False
@@ -501,7 +501,7 @@ def test_require_auth_blocks_when_no_context():
 
 
 def test_require_auth_passes_with_context():
-    with patch("ai.functions.crud.settings") as mock_settings:
+    with patch("instacrud.ai.functions.crud.settings") as mock_settings:
         mock_settings.ALLOW_AI_TOOLS = True
         mock_settings.ALLOW_AI_RW_ACCESS = True
         mock_settings.ALLOW_AI_SYSTEM_ACCESS = False
@@ -519,7 +519,7 @@ def test_require_auth_passes_with_context():
 
 
 def test_require_write_role_blocks_when_rw_disabled():
-    with patch("ai.functions.crud.settings") as mock_settings:
+    with patch("instacrud.ai.functions.crud.settings") as mock_settings:
         mock_settings.ALLOW_AI_TOOLS = True
         mock_settings.ALLOW_AI_RW_ACCESS = False
         mock_settings.ALLOW_AI_SYSTEM_ACCESS = False
@@ -528,7 +528,7 @@ def test_require_write_role_blocks_when_rw_disabled():
 
 
 def test_require_write_role_passes_when_rw_enabled():
-    with patch("ai.functions.crud.settings") as mock_settings:
+    with patch("instacrud.ai.functions.crud.settings") as mock_settings:
         mock_settings.ALLOW_AI_TOOLS = True
         mock_settings.ALLOW_AI_RW_ACCESS = True
         mock_settings.ALLOW_AI_SYSTEM_ACCESS = False
@@ -604,7 +604,7 @@ async def test_llm_guardrail_catches_regex_bypass(payload: str) -> None:
         return_value='{"action": "BLOCK", "reason": "semantic injection detected"}'
     )
     with patch(
-        "ai.functions.crud._resolve_guardrail_client",
+        "instacrud.ai.functions.crud._resolve_guardrail_client",
         new_callable=AsyncMock,
         return_value=mock_client,
     ):

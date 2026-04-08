@@ -2,7 +2,7 @@
 
 Usage::
 
-    from ai.functions.crud import (
+    from instacrud.ai.functions.crud import (
         crud_list, CRUD_LIST_TOOL,
         crud_get, CRUD_GET_TOOL,
         crud_create, CRUD_CREATE_TOOL,
