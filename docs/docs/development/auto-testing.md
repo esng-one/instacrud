@@ -21,6 +21,7 @@ The backend test suite is located in `backend/test/` and uses **pytest** with su
 | `lifecycle_test.py` | Full CRUD lifecycle and user flows |
 | `pentest_test.py` | Security tests (injection, authorization, input validation) |
 | `ai_agent_test.py` | AI agent functionality |
+| `ai_tools_test.py` | ToolDef adapters, security guards (prompt injection, NoSQL/XSS, abuse guardrail), and LLM tool-calling integration — see [Using the AI Tools](./using-ai-tools.md) |
 | `vector_search_test.py` | Vector search and embeddings |
 | `svt_test.py` | Stress load and tenant isolation tests (see note below) |
 | `firestore_test.py` | Firestore-specific operations (excluded from bulk runs) |

@@ -266,3 +266,14 @@ Effective vibecoding with Claude Code:
 7. **Keep dev servers running** to see changes immediately
 8. **Review and learn** from generated code
 
+---
+
+## Going further with AI
+
+Once you are comfortable building on InstaCRUD, the AI layer has more to offer:
+
+- **[Using the AI Framework](./using-ai-framework.md)** — `AiServiceClient`, embeddings, vision, streaming, and model configuration
+- **[Using the AI Tools](./using-ai-tools.md)** — give any LLM agent direct read/write access to your data with pre-built CRUD and search tools
+- **[AI Assistant](../user-guide/ai-assistant.md)** — the built-in chat UI, which you can extend or repurpose for your own use case
+- **[AI Assistant with Ollama](../getting-started/ollama-local-ai.md)** — run the full AI stack locally with no API keys
+

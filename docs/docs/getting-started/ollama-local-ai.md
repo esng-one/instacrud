@@ -106,3 +106,4 @@ Switch between Ollama and cloud models at any time from the model dropdown in th
 
 - **Not enough VRAM?** Ollama will offload layers to CPU automatically, at the cost of speed. Mistral 7B can run on CPU-only, just slowly.
 - **Adding more models?** Any model available on [ollama.com/library](https://ollama.com/library) can be added to `init_ai_models.py` as a new entry with `service: AiServiceProvider.OLLAMA`. See [Using the AI Framework](../development/using-ai-framework.md) for details.
+- **Using tools with Ollama?** The [AI tool functions](../development/using-ai-tools.md) — including the two-stage abuse guardrail — work with any Ollama model that supports tool calling. Set `TOOLS_GUARDRAIL_MODEL` to a locally served model identifier to keep the guardrail fully offline.

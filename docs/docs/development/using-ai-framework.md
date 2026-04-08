@@ -79,3 +79,11 @@ poetry run python init/init_ai_models.py
 ### Why DeepInfra?
 
 [DeepInfra](https://deepinfra.com/) is selected as the default open-model provider for three reasons: it offers a wide catalogue of frontier open-source models under a single OpenAI-compatible API, its pricing is among the lowest available for hosted inference, and it does not train on your data — making it a reasonable choice when privacy matters. While we recommend it and use it ourselves, adding a new provider is straightforward — there is no vendor lock-in.
+
+---
+
+## Next steps
+
+- **[Using the AI Tools](./using-ai-tools.md)** — ready-made CRUD and search tool functions for LLM agents, built on top of this framework
+- **[AI Assistant](../user-guide/ai-assistant.md)** — the built-in chat UI that uses `AiServiceClient` end-to-end
+- **[AI Assistant with Ollama](../getting-started/ollama-local-ai.md)** — run all AI features locally with no API keys

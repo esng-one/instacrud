@@ -94,6 +94,7 @@ const sidebars = {
         'development/screenshots-for-docs',
         'development/python-only-server',
         'development/using-ai-framework',
+        'development/using-ai-tools',
       ],
     },
 

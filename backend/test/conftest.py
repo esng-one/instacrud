@@ -1,3 +1,4 @@
+import logging
 import pytest
 import asyncio
 import time
@@ -5,6 +6,7 @@ from pathlib import Path
 from typing import AsyncGenerator
 
 import httpx
+from loguru import logger as _loguru_logger
 from motor.motor_asyncio import AsyncIOMotorClient
 from httpx import ASGITransport
 from testcontainers.mongodb import MongoDbContainer
@@ -13,6 +15,20 @@ from instacrud.config import settings
 from instacrud.app import app
 from instacrud.database import set_client, init_system_db
 from instacrud.model.system_model import User, Organization
+
+
+class _PropagateHandler(logging.Handler):
+    """Forward loguru records into stdlib logging so pytest's live-log sees them."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        logging.getLogger(record.name).handle(record)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _loguru_to_pytest_sink():
+    handler_id = _loguru_logger.add(_PropagateHandler(), level="DEBUG")
+    yield
+    _loguru_logger.remove(handler_id)
 
 
 async def wait_for_org_active(

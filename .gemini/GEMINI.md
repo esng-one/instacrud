@@ -109,11 +109,20 @@ EOF
 
 The testcontainer credentials are `test:test` and it binds to `localhost:27017` by default. Adjust the db/collection names to match what you're debugging.
 
+### Docs (`docs/`)
+
+```bash
+cd docs && npm start -- --host 0.0.0.0 --port 3002
+```
+
+Port 3002 is used to avoid colliding with the frontend on port 3000.
+
 ### Typical dev setup
 
 Both servers run simultaneously in hot-reload mode:
 - **Backend:** from `backend/` — `poetry run uvicorn instacrud.main:app --reload` (port 8000)
 - **Frontend:** `npm run dev` (port 3000)
+- **Docs:** `cd docs && npm start -- --host 0.0.0.0 --port 3002` (port 3002)
 
 ### Docker
 ```
@@ -125,3 +134,13 @@ docker compose up    # full stack locally
 - Backend routes follow FastAPI router pattern; models use Beanie `Document` subclasses
 - Frontend API calls go through the generated client in `src/api/`
 - Env vars: copy `etalon.env` to `.env` and fill in secrets
+
+## Building AI agents
+
+**Read `docs/docs/development/using-ai-tools.md` first.** It documents the ready-made tool layer in `backend/ai/functions/` and includes a working LangChain agent loop example (tool binding → `ainvoke` → tool dispatch). Key files:
+
+- `backend/ai/functions/crud.py` — `ALL_TOOLS`, `CRUD_*_TOOL`, `FIND_ENTITIES_TOOL`
+- `backend/instacrud/ai/tools.py` — `ToolDef`, `to_langchain_tool`, `to_anthropic_tool`, `to_openai_tool`
+- `backend/instacrud/ai/ai_service.py` — `AiServiceClient` (wraps the LLM, owns the tool-calling loop for MCP)
+- `backend/instacrud/database.py` — `init_org_db` (call once before the loop to bind the org DB)
+- `backend/instacrud/context.py` — `current_user_context` / `CurrentUserContext` (set before any tool call)

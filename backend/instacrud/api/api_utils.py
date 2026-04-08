@@ -1,4 +1,5 @@
 import json
+import re
 from typing import Type, TypeVar, List, Optional, Any
 from bson import ObjectId
 from uuid import UUID
@@ -206,6 +207,32 @@ def _parse_filter(obj: Any, depth: int = 0):
     return obj
 
 
+# ==========================================================
+#  Write-payload security validation (XSS / NoSQL data-key)
+# ==========================================================
+
+_API_XSS_RE = re.compile(r'<script|javascript:|on\w+\s*=', re.IGNORECASE)
+_API_NOSQL_OP_KEY_RE = re.compile(r'^\$')
+_API_MAX_DEPTH = 5
+
+
+def _api_scan_write_data(data: Any, field: str = "data", depth: int = 0) -> None:
+    """Raise HTTPException(400) if *data* contains XSS payloads or NoSQL-operator keys."""
+    if depth > _API_MAX_DEPTH:
+        return
+    if isinstance(data, str):
+        if _API_XSS_RE.search(data):
+            raise HTTPException(400, f"XSS payload in field '{field}'.")
+    elif isinstance(data, dict):
+        for key, value in data.items():
+            if isinstance(key, str) and _API_NOSQL_OP_KEY_RE.match(key):
+                raise HTTPException(400, f"NoSQL operator key '{key}' not permitted in '{field}'.")
+            _api_scan_write_data(value, f"{field}.{key}", depth + 1)
+    elif isinstance(data, list):
+        for i, item in enumerate(data):
+            _api_scan_write_data(item, f"{field}[{i}]", depth + 1)
+
+
 # --- Generic CRUD router factory ---
 T = TypeVar("T", bound=Document)
 
@@ -242,6 +269,7 @@ def create_crud_router(
     @router.post("", response_model=model, dependencies=[Depends(role_required(*write_roles))])
     async def create_item(item_data: model = Body(...)):
         data = _normalize_fk_values(item_data.model_dump())
+        _api_scan_write_data(data)
 
         # Auto-set user_id if userScoped
         if userScoped:
@@ -315,6 +343,7 @@ def create_crud_router(
                 raise HTTPException(status_code=404, detail=f"{model.__name__} not found")
 
         data = _normalize_fk_values(item_data.model_dump(exclude_unset=True))
+        _api_scan_write_data(data)
         await _validate_foreign_keys(model, data)
 
         # Prevent user_id from being changed if userScoped
@@ -354,6 +383,7 @@ def create_crud_router(
             if getattr(item_obj, "user_id", None) != user_ctx.user_id:
                 raise HTTPException(status_code=404, detail=f"{model.__name__} not found")
 
+        _api_scan_write_data(item_data)
         data = _normalize_fk_values(item_data)
         await _validate_foreign_keys(model, data)
 

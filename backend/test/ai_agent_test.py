@@ -839,3 +839,4 @@ async def test_sync_patch_blocked_when_disabled(sync_test_context):
     )
     if conv_id:
         await http_client.delete(f"/api/v1/conversations/{conv_id}", headers=headers_user)
+

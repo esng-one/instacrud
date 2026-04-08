@@ -52,6 +52,9 @@ testcontainers = "^4.5.0"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
+log_cli = true
+log_cli_level = "INFO"
+log_level = "INFO"
 markers = [
     # Severity levels
     "critical: Critical security issues - data breach, auth bypass, cross-tenant access",

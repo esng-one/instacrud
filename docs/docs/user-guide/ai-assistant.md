@@ -176,6 +176,12 @@ All AI features work with locally hosted models via [Ollama](https://ollama.com/
 
 ---
 
+## Extending the AI layer
+
+The assistant is built on `AiServiceClient` from the [AI Framework](../development/using-ai-framework.md). If you want to give an AI agent direct read/write access to your data, see [Using the AI Tools](../development/using-ai-tools.md) — it provides ready-made CRUD, conversation, and search tool functions that work with Anthropic, OpenAI, and LangChain agents out of the box.
+
+---
+
 ## Best Practices
 
 ### Effective Prompting

@@ -112,6 +112,26 @@ class AppSettings(BaseSettings):
     # === Embeddings ===
     DEFAULT_EMBEDDING_MODEL: str = "intfloat/multilingual-e5-large"
 
+    # === AI Tool Access ===
+    # Global killswitch: disables every AI tool function entirely.
+    # Models receive a terminal error and must not retry.
+    ALLOW_AI_TOOLS: bool = True
+    # Master read/write switch for all AI tool functions (org and system entities).
+    # When False, all crud_create/update/patch/delete and conversation write calls
+    # are blocked regardless of role.  True by default — set to False to make the
+    # AI layer fully read-only across the board.
+    ALLOW_AI_RW_ACCESS: bool = True
+    # Killswitch: allow AI tool functions to read/write system models
+    # (Organization, User, AiModel, Tier, …).  False by default — even
+    # ADMIN and ORG_ADMIN roles are blocked unless this is explicitly set.
+    ALLOW_AI_SYSTEM_ACCESS: bool = False
+    # LLM-based tool-abuse guardrail. Set to an OpenAI model identifier (e.g.
+    # "gpt-5-mini") to enable a second-layer check after regex-based injection
+    # detection. When set, every high-risk tool call is classified by this model
+    # before execution; calls judged as scraping, enumeration, bulk-deletion, or
+    # DoS are blocked. Leave empty to disable (regex layer still active).
+    TOOLS_GUARDRAIL_MODEL: Optional[str] = "gpt-5-mini"
+
     # === Validators ===
     @field_validator("EMAIL_CARRIER")
     def validate_email_driver(cls, v):
