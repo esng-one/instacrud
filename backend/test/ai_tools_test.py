@@ -27,7 +27,7 @@ if _backend_dir not in _sys.path:
 from instacrud.ai.tools import ToolDef, to_anthropic_tool, to_openai_tool  # noqa: E402
 from instacrud.api.api_utils import _api_scan_write_data  # noqa: E402
 from instacrud.context import current_user_context, CurrentUserContext  # noqa: E402
-from ai.functions.crud import (  # noqa: E402
+from instacrud.ai.functions.crud import (  # noqa: E402
     _check_prompt_injection,
     _scan_data_for_injection,
     _scan_for_nosql_data_keys,

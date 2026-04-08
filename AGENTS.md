@@ -137,9 +137,9 @@ docker compose up    # full stack locally
 
 ## Building AI agents
 
-**Read `docs/docs/development/using-ai-tools.md` first.** It documents the ready-made tool layer in `backend/ai/functions/` and includes a working LangChain agent loop example (tool binding → `ainvoke` → tool dispatch). Key files:
+**Read `docs/docs/development/using-ai-tools.md` first.** It documents the ready-made tool layer in `backend/instacrud/ai/functions/` and includes a working LangChain agent loop example (tool binding → `ainvoke` → tool dispatch). Key files:
 
-- `backend/ai/functions/crud.py` — `ALL_TOOLS`, `CRUD_*_TOOL`, `FIND_ENTITIES_TOOL`
+- `backend/instacrud/ai/functions/crud.py` — `ALL_TOOLS`, `CRUD_*_TOOL`, `FIND_ENTITIES_TOOL`
 - `backend/instacrud/ai/tools.py` — `ToolDef`, `to_langchain_tool`, `to_anthropic_tool`, `to_openai_tool`
 - `backend/instacrud/ai/ai_service.py` — `AiServiceClient` (wraps the LLM, owns the tool-calling loop for MCP)
 - `backend/instacrud/database.py` — `init_org_db` (call once before the loop to bind the org DB)

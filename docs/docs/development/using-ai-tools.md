@@ -5,7 +5,7 @@ title: Using the AI Tools
 
 # Using the AI Tools
 
-InstaCRUD ships with a set of ready-made **LLM tool functions** in `backend/ai/functions/` that let any AI agent read and write your data directly — without you having to build a custom tool layer. The tools cover full CRUD operations on all org entities, conversation management, and cross-model search. They work with Anthropic, OpenAI, LangChain/LangGraph, or any framework that supports function/tool calling.
+InstaCRUD ships with a set of ready-made **LLM tool functions** in `backend/instacrud/ai/functions/` that let any AI agent read and write your data directly — without you having to build a custom tool layer. The tools cover full CRUD operations on all org entities, conversation management, and cross-model search. They work with Anthropic, OpenAI, LangChain/LangGraph, or any framework that supports function/tool calling.
 
 ---
 
@@ -17,7 +17,7 @@ The tool layer sits on top of the [AI Framework](./using-ai-framework.md) and ex
 Your LLM agent
     └── tool call (Anthropic / OpenAI / LangChain format)
             └── ToolDef adapter  (backend/instacrud/ai/tools.py)
-                    └── tool function  (backend/ai/functions/crud.py)
+                    └── tool function  (backend/instacrud/ai/functions/crud.py)
                             └── Security guards → Beanie / MongoDB
 ```
 
@@ -29,7 +29,7 @@ Your LLM agent
 
 ```python
 from instacrud.ai.tools import ToolDef, to_anthropic_tool, to_openai_tool, to_langchain_tool
-from ai.functions.crud import CRUD_LIST_TOOL, CRUD_CREATE_TOOL, ALL_TOOLS
+from instacrud.ai.functions.crud import CRUD_LIST_TOOL, CRUD_CREATE_TOOL, ALL_TOOLS
 
 # Anthropic
 tools = [to_anthropic_tool(t) for t in ALL_TOOLS]
@@ -86,7 +86,7 @@ User-scoped — tools automatically filter to the authenticated user's conversat
 All tool functions are plain async functions — you can call them directly without going through a tool-calling loop:
 
 ```python
-from ai.functions.crud import crud_list, crud_create, crud_get, crud_patch, crud_delete
+from instacrud.ai.functions.crud import crud_list, crud_create, crud_get, crud_patch, crud_delete
 
 items = await crud_list("Client", limit=5)
 item  = await crud_get("Client", "507f1f77bcf86cd799439011")
@@ -110,7 +110,7 @@ from instacrud.ai.tools import to_langchain_tool
 from instacrud.model.system_model import AiModel
 from instacrud.database import init_org_db
 from instacrud.context import current_user_context, CurrentUserContext
-from ai.functions.crud import (
+from instacrud.ai.functions.crud import (
     CRUD_CREATE_TOOL, CRUD_LIST_TOOL, CRUD_GET_TOOL,
     CRUD_UPDATE_TOOL, CRUD_PATCH_TOOL, CRUD_DELETE_TOOL,
     FIND_ENTITIES_TOOL,
