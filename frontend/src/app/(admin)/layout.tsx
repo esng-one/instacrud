@@ -5,6 +5,7 @@ import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import AuthGuard from "@/components/auth/AuthGuard";
 import ProvisioningGuard from "@/components/auth/ProvisioningGuard";
+import { MeProvider } from "@/context/MeContext";
 import Backdrop from "@/layout/Backdrop";
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -50,6 +51,7 @@ export default function AdminLayout({
 
   return (
     <AuthGuard>
+      <MeProvider>
       <ProvisioningGuard>
         <div className="min-h-screen">
         {/* Sidebar and Backdrop */}
@@ -66,6 +68,7 @@ export default function AdminLayout({
         </div>
         </div>
       </ProvisioningGuard>
+      </MeProvider>
     </AuthGuard>
   );
 }

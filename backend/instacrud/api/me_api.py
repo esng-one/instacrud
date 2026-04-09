@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from instacrud.ai.usage_tracker import UsageTracker
 from instacrud.api.api_utils import role_required
-from instacrud.api.me_dto import MeOrgInfo, MeResponse, MeTierInfo, MeUpdateRequest, MeUsageInfo, MeUserInfo
+from instacrud.api.me_dto import MeOrgInfo, MeOrganizationResponse, MeOrganizationUpdate, MeResponse, MeTierInfo, MeUpdateRequest, MeUsageInfo, MeUserInfo
 from instacrud.context import current_user_context
 from instacrud.model.system_model import Organization, Role, Tier, User
 
@@ -24,8 +24,8 @@ async def _build_me_response(user: User) -> MeResponse:
         org_info = MeOrgInfo(
             id=str(org.id),
             name=org.name,
-            code=org.code,
             description=org.description,
+            status=org.status,
         )
 
     # Tier — org tier takes precedence over user tier
@@ -94,3 +94,57 @@ async def patch_me(
 
     await user.save()
     return await _build_me_response(user)
+
+
+@router.get("/me/organization", response_model=MeOrganizationResponse, tags=["me"])
+async def get_me_organization(
+    _: Annotated[None, Depends(role_required(Role.ORG_ADMIN))]
+):
+    """Return the organization of the currently authenticated ORG_ADMIN user."""
+    ctx = current_user_context.get()
+    if not ctx.organization_id:
+        raise HTTPException(status_code=404, detail="No organization assigned")
+    org = await Organization.get(ctx.organization_id)
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return MeOrganizationResponse(
+        id=str(org.id),
+        name=org.name,
+        code=org.code,
+        description=org.description,
+        local_only_conversations=org.local_only_conversations,
+        tier_id=str(org.tier_id) if org.tier_id else None,
+    )
+
+
+@router.patch("/me/organization", response_model=MeOrganizationResponse, tags=["me"])
+async def patch_me_organization(
+    data: MeOrganizationUpdate,
+    _: Annotated[None, Depends(role_required(Role.ORG_ADMIN))]
+):
+    """Update allowed organization fields (name, description, local_only_conversations) for ORG_ADMIN."""
+    ctx = current_user_context.get()
+    if not ctx.organization_id:
+        raise HTTPException(status_code=404, detail="No organization assigned")
+    org = await Organization.get(ctx.organization_id)
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    if org.status != "ACTIVE":
+        raise HTTPException(status_code=409, detail="Organization is not active")
+
+    if data.name is not None:
+        org.name = data.name
+    if data.description is not None:
+        org.description = data.description
+    if data.local_only_conversations is not None:
+        org.local_only_conversations = data.local_only_conversations
+
+    await org.save()
+    return MeOrganizationResponse(
+        id=str(org.id),
+        name=org.name,
+        code=org.code,
+        description=org.description,
+        local_only_conversations=org.local_only_conversations,
+        tier_id=str(org.tier_id) if org.tier_id else None,
+    )

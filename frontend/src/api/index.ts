@@ -45,6 +45,8 @@ export type { McpResourceRequest } from './models/McpResourceRequest';
 export type { McpResourcesResponse } from './models/McpResourcesResponse';
 export type { McpToolInfo } from './models/McpToolInfo';
 export type { McpToolsResponse } from './models/McpToolsResponse';
+export type { MeOrganizationResponse } from './models/MeOrganizationResponse';
+export type { MeOrganizationUpdate } from './models/MeOrganizationUpdate';
 export type { MeOrgInfo } from './models/MeOrgInfo';
 export type { MeResponse } from './models/MeResponse';
 export type { MessageResponse } from './models/MessageResponse';

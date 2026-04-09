@@ -5,9 +5,9 @@
 export type MeOrgInfo = {
     id: string;
     name: string;
-    code: string;
     description: (string | null);
+    status: string;
 };
 
 
-export const MeOrgInfoRequired = ["id","name","code"] as const;
+export const MeOrgInfoRequired = ["id","name","status"] as const;

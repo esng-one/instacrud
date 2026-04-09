@@ -15,8 +15,8 @@ class MeUserInfo(BaseModel):
 class MeOrgInfo(BaseModel):
     id: str
     name: str
-    code: str
     description: Optional[str]
+    status: str
 
 
 class MeUsageInfo(BaseModel):
@@ -44,3 +44,18 @@ class MeUpdateRequest(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
     # local_only_conversations excluded — handled by PATCH /user-settings
+
+
+class MeOrganizationResponse(BaseModel):
+    id: str
+    name: str
+    code: str
+    description: Optional[str]
+    local_only_conversations: bool
+    tier_id: Optional[str]  # read-only; None if no tier assigned to the org
+
+
+class MeOrganizationUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    local_only_conversations: Optional[bool] = None
