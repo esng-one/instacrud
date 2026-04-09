@@ -3,8 +3,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import useAuth from "@/hooks/useAuth";
-import { AdminService } from "@/api/services/AdminService";
-import { OrganizationResponse } from "@/api/models/OrganizationResponse";
+import { MeService } from "@/api/services/MeService";
 import AuthLoader from "@/components/auth/AuthLoader";
 import { getApiErrorInfo } from "@/app/lib/api-error";
 
@@ -58,31 +57,26 @@ export default function ProvisioningGuard({ children }: { children: React.ReactN
 
     const checkStatus = async () => {
       try {
-        const userInfoStr = localStorage.getItem("user.info");
+        const me = await MeService.getMeMeGet();
 
-        if (!userInfoStr) {
-          setStatus("failed");
-          stopPolling();
-          return;
-        }
+        if (cancelled) return;
 
-        const userInfo = JSON.parse(userInfoStr);
-        const orgId = userInfo.organization_id;
-        const role = userInfo.role;
-
-        if (!orgId) {
-          if (role === "ADMIN") {
+        // ADMIN with no org is always ready
+        if (!me.organization) {
+          if (me.user.role === "ADMIN") {
             setStatus("ready");
             stopPolling();
             return;
           }
-
           setStatus("failed");
           stopPolling();
           return;
         }
 
-        // Skip API call if we already know the org is active
+        const orgId = me.organization.id;
+        const orgStatus = me.organization.status;
+
+        // Skip further polling if we already know the org is active
         const cachedStatus = getCachedOrgStatus(orgId);
         if (cachedStatus === "ACTIVE") {
           setStatus("ready");
@@ -90,12 +84,7 @@ export default function ProvisioningGuard({ children }: { children: React.ReactN
           return;
         }
 
-        const org: OrganizationResponse =
-          await AdminService.getOrganizationAdminOrganizationsOrganizationIdGet(orgId);
-
-        if (cancelled) return;
-
-        switch (org.status) {
+        switch (orgStatus) {
           case "PROVISIONING":
             setStatus("provisioning");
             break;
@@ -106,7 +95,7 @@ export default function ProvisioningGuard({ children }: { children: React.ReactN
             break;
 
           default:
-            setCachedOrgStatus(orgId, org.status ?? "ACTIVE");
+            setCachedOrgStatus(orgId, orgStatus ?? "ACTIVE");
             setStatus("ready");
             stopPolling();
         }
@@ -150,7 +139,7 @@ export default function ProvisioningGuard({ children }: { children: React.ReactN
         </h2>
 
         <p className="text-gray-500 dark:text-gray-400 text-center max-w-md">
-          We are provisioning your organization's resources. This usually takes about 2-3 minutes.
+          We are provisioning your organization&apos;s resources. This usually takes about 2-3 minutes.
         </p>
 
         <button

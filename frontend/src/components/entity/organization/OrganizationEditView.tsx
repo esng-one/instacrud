@@ -30,7 +30,7 @@ export default function OrganizationEditView({
   const formFields: {
     label: string;
     field: keyof OrganizationFormData;
-    type: "text" | "reference" | "select";
+    type: "text" | "reference" | "select" | "textarea";
     required?: boolean;
     options?: typeof tierOptions | string[];
     render?: (val: string | number | boolean) => React.ReactNode;
@@ -39,7 +39,7 @@ export default function OrganizationEditView({
   }[] = [
     { label: "Name", field: "name", type: "text", required: true },
     { label: "Organization Code", field: "code", type: "text", required: true },
-    { label: "Description", field: "description", type: "text" },
+    { label: "Description", field: "description", type: "textarea" },
     {
       label: "Tier",
       field: "tier_id",
