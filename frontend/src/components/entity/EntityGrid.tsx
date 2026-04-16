@@ -64,8 +64,25 @@ export function EntityGrid<T extends Record<string, unknown>>({
     },
   };
 
-  // Include the action column if deletion is enabled (and not already present)
-  const gridColumns = [...columns];
+  // Inject a clickable link on the "name" column instead of using row-level click
+  const gridColumns = columns.map((col) => {
+    if (col.field === "name" && onRowClick && !col.renderCell) {
+      return {
+        ...col,
+        renderCell: (params: GridRenderCellParams) => (
+          <a
+            onClick={(e) => { e.preventDefault(); onRowClick(params.id as string); }}
+            href="#"
+            className="text-blue-600 underline cursor-pointer"
+          >
+            {params.value as string}
+          </a>
+        ),
+      };
+    }
+    return col;
+  });
+
   if (onDelete && !gridColumns.some((col) => col.field === "action")) {
     gridColumns.push(actionColumn);
   }
@@ -86,9 +103,6 @@ export function EntityGrid<T extends Record<string, unknown>>({
           onPageChange?.(model.page, model.pageSize)
         }
         autoHeight
-        onRowClick={(params: GridRowParams) => {
-          onRowClick?.(params.id as string);
-        }}
         localeText={{
           paginationDisplayedRows: ({ from, to }: { from: number; to: number }) =>
             `${from}-${to}`,
