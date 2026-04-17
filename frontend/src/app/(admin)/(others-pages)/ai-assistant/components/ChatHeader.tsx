@@ -1,5 +1,5 @@
 import React from "react";
-import { EyeSlashIcon, PlusIcon, LightBulbIcon } from "@heroicons/react/24/outline";
+import { EyeSlashIcon, PlusIcon, LightBulbIcon, BoltIcon } from "@heroicons/react/24/outline";
 import { AiModel_Input as AiModel } from "@/api/models/AiModel_Input";
 import { ConversationHistory } from "./ConversationHistory";
 import { ModelSelect } from "./ModelSelect";
@@ -23,6 +23,7 @@ interface ChatHeaderProps {
   imageQuality: string;
   imageCount: number;
   reasoning: boolean;
+  agentic: boolean;
   attachedImage: { data: string; url: string } | null;
   conversations: LocalConversation[];
   conversationId: string;
@@ -36,6 +37,7 @@ interface ChatHeaderProps {
   onQualityChange: (quality: string) => void;
   onCountChange: (count: number) => void;
   onReasoningChange: (reasoning: boolean) => void;
+  onAgenticChange: (agentic: boolean) => void;
   onNewChat: () => void;
   onTempModeToggle: () => void;
   onHistoryToggle: () => void;
@@ -57,6 +59,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   imageQuality,
   imageCount,
   reasoning,
+  agentic,
   attachedImage,
   conversations,
   conversationId,
@@ -70,6 +73,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onQualityChange,
   onCountChange,
   onReasoningChange,
+  onAgenticChange,
   onNewChat,
   onTempModeToggle,
   onHistoryToggle,
@@ -183,6 +187,24 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             }`}
           >
             <LightBulbIcon className="h-5 w-5" />
+          </button>
+        )}
+
+        {/* Agentic Toggle - enable all tools (tools = "*") */}
+        {mode === "chat" && (
+          <button
+            type="button"
+            title={agentic ? "Agentic mode enabled (all tools)" : "Enable agentic mode (all tools)"}
+            aria-label="Toggle agentic mode"
+            aria-pressed={agentic}
+            onClick={() => onAgenticChange(!agentic)}
+            className={`inline-flex items-center justify-center h-9 w-9 rounded-lg text-sm transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-brand-500/20 border ${
+              agentic
+                ? "bg-brand-500 text-white hover:bg-brand-600 border-brand-500"
+                : "bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border-gray-300 dark:border-gray-700"
+            }`}
+          >
+            <BoltIcon className="h-5 w-5" />
           </button>
         )}
 

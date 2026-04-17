@@ -270,7 +270,7 @@ export function useConversation({
   // Auto-save on changes
   useEffect(() => {
     saveConversation(false, false);
-  }, [messages, conversationTitle, chatModelId]);
+  }, [messages, conversationTitle, chatModelId, tools]);
 
   const handleNewChat = useCallback(
     (mode: "chat" | "image-gen") => {

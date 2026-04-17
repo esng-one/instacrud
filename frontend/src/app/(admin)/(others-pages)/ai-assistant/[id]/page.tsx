@@ -90,7 +90,16 @@ export default function AiAssistantChatPage() {
     path,
     context,
     tools,
+    updateAiParams,
   } = conversationHook;
+
+  const agentic = tools === "*";
+  const handleAgenticChange = useCallback(
+    (value: boolean) => {
+      updateAiParams({ tools: value ? "*" : null });
+    },
+    [updateAiParams]
+  );
 
   const chatStreamHook = useChatStream({
     conversationId,
@@ -280,6 +289,8 @@ export default function AiAssistantChatPage() {
         onQualityChange={setImageQuality}
         onCountChange={setImageCount}
         onReasoningChange={setReasoning}
+        agentic={agentic}
+        onAgenticChange={handleAgenticChange}
         onNewChat={() => handleNewChat(mode)}
         onTempModeToggle={() => handleTempModeToggle(mode)}
         onHistoryToggle={() => setShowHistoryDropdown(!showHistoryDropdown)}
