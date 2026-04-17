@@ -14,6 +14,7 @@ export type { AiModel_Output } from './models/AiModel_Output';
 export { AiServiceProvider } from './models/AiServiceProvider';
 export type { CalendarEvent } from './models/CalendarEvent';
 export type { ChangePasswordRequest } from './models/ChangePasswordRequest';
+export type { ChatRequest } from './models/ChatRequest';
 export type { Client_Input } from './models/Client_Input';
 export type { Client_Output } from './models/Client_Output';
 export { ClientType } from './models/ClientType';

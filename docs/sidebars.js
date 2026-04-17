@@ -36,6 +36,7 @@ const sidebars = {
         'user-guide/documents',
         'user-guide/calendar',
         'user-guide/ai-assistant',
+        'user-guide/agentic-page-assistant',
         'user-guide/search',
         'user-guide/administration',
         'user-guide/ai-models-tiers',
@@ -95,6 +96,7 @@ const sidebars = {
         'development/python-only-server',
         'development/using-ai-framework',
         'development/using-ai-tools',
+        'development/agentic-page-assistant',
       ],
     },
 

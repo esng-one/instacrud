@@ -1,6 +1,7 @@
 // components/entity/EntityDetailView.tsx
 "use client";
-import React from "react";
+import React, { useMemo } from "react";
+import { useAiPageContext } from "@/hooks/useAiPageContext";
 
 export interface DetailField<T> {
   label: string;
@@ -15,6 +16,8 @@ interface EntityDetailViewProps<T> {
   onRemove?: () => void;
   detailExtras?: (item: T) => React.ReactNode;
   modelName: string;
+  /** Set to false to prevent this instance from publishing its data as the AI panel context (e.g. for sub-entity sections). Defaults to true. */
+  publishAiContext?: boolean;
 }
 
 /**
@@ -28,7 +31,18 @@ export function EntityDetailView<T extends Record<string, unknown>>({
   onRemove,
   detailExtras,
   modelName,
+  publishAiContext = true,
 }: EntityDetailViewProps<T>) {
+  // Publish current item to the in-page AI assistant
+  const contextJson = useMemo(() => {
+    try {
+      return JSON.stringify(item, null, 2);
+    } catch {
+      return "";
+    }
+  }, [item]);
+  useAiPageContext({ context: contextJson, systemPrompt: "", enabled: publishAiContext });
+
   return (
     <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6 space-y-6 bg-white dark:bg-gray-900">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">

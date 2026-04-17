@@ -25,6 +25,11 @@ interface UseChatStreamOptions {
   reasoningRef: React.MutableRefObject<boolean>;
   selectedModelId: string | null;
   selectedModel: AiModel | null;
+  // Conversation-level AI parameters (null = not set / not used)
+  systemPrompt: string | null;
+  path: string | null;
+  context: string | null;
+  tools: string | null;
 }
 
 interface UseChatStreamReturn {
@@ -64,6 +69,10 @@ export function useChatStream({
   reasoningRef,
   selectedModelId,
   selectedModel,
+  systemPrompt,
+  path,
+  context,
+  tools,
 }: UseChatStreamOptions): UseChatStreamReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -241,26 +250,46 @@ export function useChatStream({
         throw new Error("Model identifier not found");
       }
 
-      const endpoint = useImageEndpoint ? "/completion/image" : "/completion";
       const currentModelForReasoning = aiModelsRef.current.find((m) => m._id === currentModelId);
       const shouldUseReasoning = reasoningRef.current && currentModelForReasoning?.reasoning;
 
-      const requestBody =
-        useImageEndpoint && imageToSend
-          ? {
-              model_id: modelIdentifier,
-              prompt: fullPrompt,
-              image_data: imageToSend.data,
-              image_detail: "auto",
-              stream: true,
-              reasoning: shouldUseReasoning,
-            }
-          : {
-              model_id: modelIdentifier,
-              prompt: fullPrompt,
-              stream: true,
-              reasoning: shouldUseReasoning,
-            };
+      // Use /chat endpoint when conversation-level AI params are set
+      const hasChatParams = !!(systemPrompt || path || context || tools);
+
+      let endpoint: string;
+      let requestBody: Record<string, unknown>;
+
+      if (hasChatParams && !useImageEndpoint) {
+        endpoint = "/chat";
+        requestBody = {
+          model_id: modelIdentifier,
+          prompt: fullPrompt,
+          stream: true,
+          reasoning: shouldUseReasoning,
+          ...(systemPrompt ? { system_prompt: systemPrompt } : {}),
+          ...(path ? { path } : {}),
+          ...(context ? { context } : {}),
+          ...(tools ? { tools } : {}),
+        };
+      } else if (useImageEndpoint && imageToSend) {
+        endpoint = "/completion/image";
+        requestBody = {
+          model_id: modelIdentifier,
+          prompt: fullPrompt,
+          image_data: imageToSend.data,
+          image_detail: "auto",
+          stream: true,
+          reasoning: shouldUseReasoning,
+        };
+      } else {
+        endpoint = "/completion";
+        requestBody = {
+          model_id: modelIdentifier,
+          prompt: fullPrompt,
+          stream: true,
+          reasoning: shouldUseReasoning,
+        };
+      }
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"}/api/v1${endpoint}`,
@@ -447,7 +476,7 @@ export function useChatStream({
         reader.releaseLock();
       }
     },
-    [conversationId, selectedModelId, setMessages, setAllConversations]
+    [conversationId, selectedModelId, setMessages, setAllConversations, systemPrompt, path, context, tools]
   );
 
   const sendMessage = useCallback(

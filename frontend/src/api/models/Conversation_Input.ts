@@ -19,6 +19,10 @@ export type Conversation_Input = {
     messages?: Array<ConversationMessage>;
     model_id?: (PydanticObjectId | null);
     last_message_at?: string;
+    system_prompt?: (string | null);
+    path?: (string | null);
+    context?: (string | null);
+    tools?: (string | null);
 };
 
 

@@ -86,6 +86,10 @@ export default function AiAssistantChatPage() {
     handleDeleteAllConversations,
     handleResyncData,
     handleTempModeToggle,
+    systemPrompt,
+    path,
+    context,
+    tools,
   } = conversationHook;
 
   const chatStreamHook = useChatStream({
@@ -105,6 +109,10 @@ export default function AiAssistantChatPage() {
     reasoningRef,
     selectedModelId,
     selectedModel,
+    systemPrompt,
+    path,
+    context,
+    tools,
   });
   const {
     isLoading,
@@ -143,7 +151,7 @@ export default function AiAssistantChatPage() {
       ? optimizedMessages.slice(-MAX_RENDERED_MESSAGES)
       : optimizedMessages;
 
-  // Memoize callback functions to prevent unnecessary re-renders
+  // Memoize callback tools to prevent unnecessary re-renders
   const handleImagePreview = useCallback((imageUrl: string) => {
     setPreviewImage(imageUrl);
   }, []);
@@ -248,7 +256,7 @@ export default function AiAssistantChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] md:h-[calc(100vh-120px)] bg-white dark:bg-gray-900 -m-4 md:-m-6">
+    <div className="flex flex-col h-[calc(100vh-64px)] lg:h-[calc(100vh-76px)] bg-white dark:bg-gray-900 -m-4 md:-m-6">
       <ChatHeader
         isTempMode={isTempMode}
         conversationTitle={conversationTitle}

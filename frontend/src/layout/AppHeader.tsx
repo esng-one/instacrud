@@ -4,12 +4,18 @@ import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
 import { Search } from "@/components/header/Search";
 import UserDropdown from "@/components/header/UserDropdown";
 import { useSidebar } from "@/context/SidebarContext";
-import React, { useState ,useEffect,useRef} from "react";
+import { useAiPanel } from "@/context/AiPanelContext";
+import { SparklesIcon } from "@heroicons/react/24/outline";
+import React, { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
+  const { isPanelOpen, togglePanel, isExcludedPath } = useAiPanel();
+  const pathname = usePathname();
+  const aiButtonDisabled = isExcludedPath(pathname);
 
   const handleToggle = () => {
     if (window.innerWidth >= 1024) {
@@ -119,6 +125,31 @@ const AppHeader: React.FC = () => {
             {/* <!-- Dark Mode Toggler --> */}
             <ThemeToggleButton />
             {/* <!-- Dark Mode Toggler --> */}
+
+            {/* <!-- AI Panel Toggle --> */}
+            <button
+              onClick={togglePanel}
+              disabled={aiButtonDisabled}
+              title={
+                aiButtonDisabled
+                  ? "AI assistant not available on this page"
+                  : isPanelOpen
+                  ? "Close AI assistant"
+                  : "Open AI assistant"
+              }
+              aria-label="Toggle AI assistant panel"
+              className={[
+                "flex items-center justify-center w-10 h-10 rounded-full border transition-colors",
+                aiButtonDisabled
+                  ? "border-gray-200 text-gray-300 dark:border-gray-700 dark:text-gray-600 cursor-not-allowed"
+                  : isPanelOpen
+                  ? "border-brand-500 bg-brand-50 text-brand-600 dark:border-brand-400 dark:bg-brand-900/20 dark:text-brand-400"
+                  : "border-gray-200 text-gray-500 hover:bg-gray-100 dark:border-gray-800 dark:text-gray-400 dark:hover:bg-gray-800",
+              ].join(" ")}
+            >
+              <SparklesIcon className="size-6" />
+            </button>
+            {/* <!-- AI Panel Toggle --> */}
 
            {/*<NotificationDropdown /> */}
             {/* <!-- Notification Menu Area --> */}

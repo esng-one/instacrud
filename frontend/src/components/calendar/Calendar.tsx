@@ -1,6 +1,7 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import FullCalendar from "@fullcalendar/react";
+import { useAiPageContext } from "@/hooks/useAiPageContext";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { EventInput, EventClickArg, EventContentArg } from "@fullcalendar/core";
@@ -54,6 +55,27 @@ const Calendar: React.FC = () => {
 
     loadEvents();
   }, []);
+
+  // Publish calendar events to the in-page AI assistant
+  const calendarContextJson = useMemo(() => {
+    try {
+      return JSON.stringify(
+        events.map((ev) => ({
+          id: ev.id,
+          title: ev.title,
+          start: ev.start,
+          end: ev.end,
+          type: ev.extendedProps?.type,
+          entityId: ev.extendedProps?.entityId,
+        })),
+        null,
+        2
+      );
+    } catch {
+      return "";
+    }
+  }, [events]);
+  useAiPageContext({ context: calendarContextJson, systemPrompt: "" });
 
   const clampPopover = () => {
     // FullCalendar renders the popover asynchronously; wait for next rAF after it appears

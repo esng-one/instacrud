@@ -51,10 +51,14 @@ from instacrud.context import current_user_context
 # ── Prompt injection protection ───────────────────────────────────────────────
 
 _INJECTION_PATTERNS: list[re.Pattern] = [
-    # "ignore / disregard / forget / override / bypass previous instructions"
+    # "ignore / disregard / forget / override / bypass [all] [previous] instructions"
+    # Handles optional determiner ("all", "your", "the", "my", "any") followed by
+    # an optional modifier ("previous", "prior", "earlier", etc.) so that both
+    # "ignore previous instructions" and "ignore all previous instructions" are caught.
     re.compile(
         r"\b(ignore|disregard|forget|override|bypass|circumvent)\s+"
-        r"(your\s+)?(previous|above|all|prior|earlier|original)?\s*"
+        r"(?:(?:all|your|the|my|any|these)\s+)?"
+        r"(previous|above|prior|earlier|original)?\s*"
         r"(instructions?|prompts?|context|constraints?|guidelines?|rules?|directives?)\b",
         re.IGNORECASE,
     ),
@@ -76,6 +80,23 @@ _INJECTION_PATTERNS: list[re.Pattern] = [
     # Common jailbreak keywords
     re.compile(r"\bdeveloper\s+mode\b", re.IGNORECASE),
     re.compile(r"\bjailbreak\b", re.IGNORECASE),
+    # Safety-policy bypass attempts ("not bound by", "without restrictions", etc.)
+    re.compile(
+        r"\bnot\s+bound\s+by\b.{0,60}\b(safety|content|policy|policies|restrictions?|guidelines?|rules?)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(without|no)\s+(safety|content|ethical?)\s+(restrictions?|guidelines?|filters?|constraints?|policies)\b",
+        re.IGNORECASE,
+    ),
+    # System-prompt disclosure attempts ("reveal your system prompt", "show me your hidden instructions")
+    re.compile(
+        r"\b(reveal|expose|print|output|leak|dump|disclose|show)\b.{0,60}"
+        r"\b(system\s+prompt|hidden\s+(?:prompt|instructions?|context|directives?)|"
+        r"secret\s+(?:prompt|instructions?|context)|internal\s+instructions?|"
+        r"your\s+(?:original\s+)?instructions?)\b",
+        re.IGNORECASE,
+    ),
 ]
 
 _MAX_SCAN_DEPTH = 5  # prevent pathological nesting

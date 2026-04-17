@@ -4,6 +4,8 @@ import { DataGrid, GridColDef, GridRowParams, GridRenderCellParams } from "@mui/
 import { Tooltip } from "@mui/material";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import Button from "@/components/ui/button/Button";
+import { useMemo } from "react";
+import { useAiPageContext } from "@/hooks/useAiPageContext";
 
 interface EntityGridProps<T> {
   rows: T[];
@@ -38,6 +40,16 @@ export function EntityGrid<T extends Record<string, unknown>>({
 }: EntityGridProps<T>) {
   // Map items so DataGrid can use a unique 'id' property
   const gridRows = rows.map((row) => ({ ...row, id: row[idKey] }));
+
+  // Publish current grid data to the in-page AI assistant
+  const contextJson = useMemo(() => {
+    try {
+      return JSON.stringify(rows, null, 2);
+    } catch {
+      return "";
+    }
+  }, [rows]);
+  useAiPageContext({ context: contextJson, systemPrompt: "" });
 
   // Define a delete-action column if onDelete handler is provided
   const actionColumn: GridColDef = {

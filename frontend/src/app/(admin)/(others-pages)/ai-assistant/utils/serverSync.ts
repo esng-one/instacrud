@@ -66,6 +66,10 @@ export async function syncConversationToServer(
           messages: serverMessages,
           model_id: conversation.modelId,
           last_message_at: conversation.lastMessageAt,
+          system_prompt: conversation.systemPrompt ?? null,
+          path: conversation.path ?? null,
+          context: conversation.context ?? null,
+          tools: conversation.tools ?? null,
         }
       );
     } else {
@@ -77,6 +81,10 @@ export async function syncConversationToServer(
         messages: serverMessages,
         model_id: conversation.modelId,
         last_message_at: conversation.lastMessageAt,
+        system_prompt: conversation.systemPrompt ?? null,
+        path: conversation.path ?? null,
+        context: conversation.context ?? null,
+        tools: conversation.tools ?? null,
       });
     }
 
@@ -128,6 +136,10 @@ export function convertServerToLocal(
     messages,
     modelId: serverConv.model_id || null,
     lastMessageAt: serverConv.last_message_at || new Date().toISOString(),
+    systemPrompt: serverConv.system_prompt ?? null,
+    path: serverConv.path ?? null,
+    context: serverConv.context ?? null,
+    tools: serverConv.tools ?? null,
   };
 }
 

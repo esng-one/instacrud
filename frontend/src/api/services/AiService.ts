@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ChatRequest } from '../models/ChatRequest';
 import type { CompletionRequest } from '../models/CompletionRequest';
 import type { CompletionResponse } from '../models/CompletionResponse';
 import type { CompletionWithImageRequest } from '../models/CompletionWithImageRequest';
@@ -33,6 +34,38 @@ export class AiService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/completion',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Create Chat
+     * Chat completion with optional system prompt and function calling.
+     *
+     * **System prompt variable bindings** (applied when `system_prompt` is set):
+     * - `$PATH` is replaced with the value of `path` if provided
+     * - `$CONTEXT` is replaced with the value of `context` if provided
+     * Both substitutions are skipped when the corresponding field is absent.
+     *
+     * **Tool calling** (`tools` field):
+     * - `null` (default) — no tools bound; behaves like `/completion` with an optional system message
+     * - `"*"` — all registered tools are bound (ALL_TOOLS: generic CRUD, Conversations, find_entities).
+     * The model runs a tool-calling loop (up to 10 iterations) and returns the final text response.
+     * New tool groups added to ALL_TOOLS are automatically included.
+     * When tools are used, `stream` is ignored and the full response is returned once the loop completes.
+     * @param requestBody
+     * @returns CompletionResponse Successful Response
+     * @throws ApiError
+     */
+    public static createChatChatPost(
+        requestBody: ChatRequest,
+    ): CancelablePromise<CompletionResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/chat',
             body: requestBody,
             mediaType: 'application/json',
             errors: {

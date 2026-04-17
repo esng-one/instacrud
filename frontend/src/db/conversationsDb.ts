@@ -19,6 +19,11 @@ export interface LocalConversation {
   messages: Message[];
   modelId: string | null;
   lastMessageAt: string;
+  // Optional parameters set at conversation initialisation time
+  systemPrompt?: string | null;
+  path?: string | null;
+  context?: string | null;
+  tools?: string | null; // null = no tools; "*" = all registered tools
 }
 
 // Database class

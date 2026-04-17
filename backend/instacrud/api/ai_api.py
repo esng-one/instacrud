@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse
 from instacrud.api.api_utils import role_required
 from instacrud.api.rate_limiter import limiter, AI_RATE_LIMIT, get_user_identifier
 from instacrud.api.ai_dto import (
+    ChatRequest,
     CompletionRequest,
     CompletionResponse,
     CompletionWithImageRequest,
@@ -109,6 +110,195 @@ async def create_completion(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Completion failed: {str(e)}")
+
+
+@router.post("/chat", response_model=CompletionResponse, tags=["ai"])
+@limiter.limit(AI_RATE_LIMIT, key_func=get_user_identifier)
+async def create_chat(
+    request: Request,
+    data: ChatRequest,
+    _: Annotated[None, Depends(role_required(Role.USER, Role.ORG_ADMIN, Role.ADMIN))]
+):
+    """
+    Chat completion with optional system prompt and function calling.
+
+    **System prompt variable bindings** (applied when `system_prompt` is set):
+    - `$PATH` is replaced with the value of `path` if provided
+    - `$CONTEXT` is replaced with the value of `context` if provided
+    Both substitutions are skipped when the corresponding field is absent.
+
+    **Tool calling** (`tools` field):
+    - `null` (default) — no tools bound; behaves like `/completion` with an optional system message
+    - `"*"` — all registered tools are bound (ALL_TOOLS: generic CRUD, Conversations, find_entities).
+      The model runs a tool-calling loop (up to 10 iterations) and returns the final text response.
+      New tool groups added to ALL_TOOLS are automatically included.
+      When tools are used, `stream` is ignored and the full response is returned once the loop completes.
+    """
+    try:
+        user_ctx = current_user_context.get()
+
+        # --- Injection guard: validate all user-controlled string fields before any LLM call ---
+        from instacrud.ai.functions.crud import _check_prompt_injection as _pi_check
+        _pi_fields = [("prompt", data.prompt)]
+        if data.system_prompt is not None:
+            _pi_fields.append(("system_prompt", data.system_prompt))
+        if data.path is not None:
+            _pi_fields.append(("path", data.path))
+        if data.context is not None:
+            _pi_fields.append(("context", data.context))
+        for _field, _value in _pi_fields:
+            try:
+                _pi_check(_value, _field)
+            except ValueError as _exc:
+                raise HTTPException(status_code=400, detail=str(_exc))
+
+        ai_model = await AiModel.find_one(AiModel.model_identifier == data.model_id)
+        if not ai_model:
+            raise HTTPException(status_code=404, detail=f"Model {data.model_id} not found")
+
+        if not ai_model.completion:
+            raise HTTPException(status_code=400, detail=f"Model {data.model_id} does not support completion")
+
+        client = AiServiceClient(ai_model=ai_model, user_id=user_ctx.user_id)
+        await client._check_tier_access()
+
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        # Build message list, injecting system prompt with variable substitution.
+        # Both variables are resolved in a single pass over the original template so that
+        # a value injected for $PATH can never itself contain $CONTEXT and trigger a second
+        # substitution (chained / double-substitution injection).
+        messages = []
+        if data.system_prompt:
+            import re
+            subs = {}
+            if data.path is not None:
+                subs["$PATH"] = data.path
+            if data.context is not None:
+                subs["$CONTEXT"] = data.context
+            if subs:
+                pattern = re.compile("|".join(re.escape(k) for k in subs))
+                sp = pattern.sub(lambda m: subs[m.group(0)], data.system_prompt)
+            else:
+                sp = data.system_prompt
+            messages.append(SystemMessage(content=sp))
+        messages.append(HumanMessage(content=data.prompt))
+
+        # Tool-calling agentic loop
+        if data.tools == "*":
+            import json
+            from langchain_core.messages import AIMessage, ToolMessage
+            from instacrud.ai.functions.crud import ALL_TOOLS
+            from instacrud.ai.tools import to_langchain_tool
+            from instacrud.ai.usage_tracker import UsageTracker
+
+            _TOOL_DIRECTIVE = (
+                "\n\nYou have access to CRUD tools that can fetch, create, update, and delete records. "
+                "When answering a question that requires data not already present in the context "
+                "(for example, resolving an ID to its full record, looking up a related entity, "
+                "or verifying a field value), call the appropriate tool immediately — "
+                "do NOT ask the user to look it up or navigate elsewhere. "
+                "Always retrieve the information yourself before answering."
+                "\n\nBefore performing any write operation (create, update, or delete), "
+                "you MUST describe the exact change you are about to make and ask the user for explicit confirmation. "
+                "Only proceed with the write after the user has confirmed."
+            )
+            # Inject the directive into the existing system message, or prepend a new one.
+            if messages and isinstance(messages[0], SystemMessage):
+                messages[0] = SystemMessage(content=messages[0].content + _TOOL_DIRECTIVE)
+            else:
+                messages.insert(0, SystemMessage(content=_TOOL_DIRECTIVE.strip()))
+
+            lc_tools = [to_langchain_tool(t) for t in ALL_TOOLS]
+            bound = client.model.bind_tools(lc_tools)
+            final_content = ""
+            total_output_chars = 0
+
+            for _ in range(10):
+                response = await bound.ainvoke(messages)
+                messages.append(response)
+
+                response_text = response.content if isinstance(response.content, str) else str(response.content)
+                total_output_chars += len(response_text)
+
+                if not getattr(response, "tool_calls", None):
+                    final_content = response_text
+                    break
+
+                for tc in response.tool_calls:
+                    tdef = next((t for t in ALL_TOOLS if t.name == tc["name"]), None)
+                    if tdef is None:
+                        content_str = f"Error: unknown tool {tc['name']}"
+                    else:
+                        try:
+                            result = await tdef.fn(**tc["args"])
+                            content_str = json.dumps(result, default=str)
+                        except Exception as exc:
+                            content_str = f"Error: {exc}"
+                    messages.append(ToolMessage(content=content_str, tool_call_id=tc["id"]))
+
+            # Track usage for the entire agentic loop (all LLM roundtrips combined)
+            if user_ctx.user_id and total_output_chars > 0:
+                estimated_tokens = total_output_chars // 4
+                if estimated_tokens > 0:
+                    if ai_model.output_tokens_cost:
+                        cost = (estimated_tokens * ai_model.output_tokens_cost) / 1_000_000
+                    else:
+                        cost = estimated_tokens * 0.000001
+                    try:
+                        await UsageTracker.check_and_increment_usage(
+                            user_id=user_ctx.user_id,
+                            cost=cost
+                        )
+                    except Exception as e:
+                        print(f"Warning: Failed to track agentic loop usage: {e}")
+
+            if data.stream:
+                async def generate_tool():
+                    yield final_content
+                return StreamingResponse(generate_tool(), media_type="text/plain")
+
+            return CompletionResponse(content=final_content, model_id=data.model_id)
+
+        # No tools — regular streaming/non-streaming completion with optional system message
+        if data.stream:
+            async def generate():
+                total_content = ""
+                try:
+                    async for chunk in client.get_completion_streaming(messages, reasoning=data.reasoning):
+                        total_content += chunk
+                        yield chunk
+                finally:
+                    if total_content and user_ctx.user_id:
+                        from instacrud.ai.usage_tracker import UsageTracker
+                        estimated_tokens = len(total_content) // 4
+                        if estimated_tokens > 0:
+                            cost = 0.0
+                            if ai_model.output_tokens_cost:
+                                cost = (estimated_tokens * ai_model.output_tokens_cost) / 1_000_000
+                            else:
+                                cost = estimated_tokens * 0.000001
+                            try:
+                                await UsageTracker.check_and_increment_usage(
+                                    user_id=user_ctx.user_id,
+                                    cost=cost
+                                )
+                            except Exception as e:
+                                print(f"Warning: Failed to track streaming usage: {e}")
+
+            return StreamingResponse(generate(), media_type="text/plain")
+        else:
+            content = await client.get_completion(messages)
+            return CompletionResponse(content=content, model_id=data.model_id)
+
+    except TierAccessDenied as e:
+        raise HTTPException(status_code=403, detail=e.message)
+    except UsageLimitExceeded as e:
+        raise HTTPException(status_code=429, detail=e.message)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
 
 
 @router.post("/completion/image", response_model=CompletionResponse, tags=["ai"])

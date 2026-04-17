@@ -37,6 +37,10 @@ class Conversation(RootModel):
     messages: List[ConversationMessage] = Field(default_factory=list)
     model_id: Optional[PydanticObjectId] = None
     last_message_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
+    system_prompt: Optional[str] = None
+    path: Optional[str] = None
+    context: Optional[str] = None
+    tools: Optional[str] = None  # None = no tools; "*" = all registered tools (ALL_TOOLS)
 
     class Settings:
         name = "conversations"

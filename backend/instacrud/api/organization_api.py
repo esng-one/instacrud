@@ -88,6 +88,14 @@ async def create_conversation(
                 existing.model_id = PydanticObjectId(item_data.model_id)
             if item_data.last_message_at is not None:
                 existing.last_message_at = item_data.last_message_at
+            if item_data.system_prompt is not None:
+                existing.system_prompt = item_data.system_prompt
+            if item_data.path is not None:
+                existing.path = item_data.path
+            if item_data.context is not None:
+                existing.context = item_data.context
+            if item_data.tools is not None:
+                existing.tools = item_data.tools
             await existing.save()
             return existing
 
@@ -98,6 +106,10 @@ async def create_conversation(
         messages=item_data.messages,
         model_id=PydanticObjectId(item_data.model_id) if item_data.model_id else None,
         last_message_at=item_data.last_message_at or datetime.now(tz=timezone.utc),
+        system_prompt=item_data.system_prompt,
+        path=item_data.path,
+        context=item_data.context,
+        tools=item_data.tools,
     )
     await conversation.insert()
     return conversation

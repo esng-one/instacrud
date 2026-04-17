@@ -9,5 +9,9 @@ export type ConversationCreate = {
     messages?: Array<ConversationMessage>;
     model_id?: (string | null);
     last_message_at?: (string | null);
+    system_prompt?: (string | null);
+    path?: (string | null);
+    context?: (string | null);
+    tools?: (string | null);
 };
 

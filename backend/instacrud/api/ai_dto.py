@@ -45,6 +45,25 @@ class ImageGenerationRequest(BaseModel):
     image_data: Optional[str] = Field(None, description="Base64 encoded reference image for image-to-image generation")
 
 
+class ChatRequest(BaseModel):
+    """Request for chat completion with optional system prompt and function calling."""
+    prompt: str = Field(..., description="The prompt for completion (may include conversation history)")
+    model_id: str = Field(..., description="AI model ID to use")
+    stream: bool = Field(default=False, description="Enable streaming response")
+    reasoning: bool = Field(default=False, description="Enable reasoning/chain-of-thought mode")
+    # System prompt template; supports variable bindings injected at request time:
+    #   $PATH    — replaced with the value of `path` if provided
+    #   $CONTEXT — replaced with the value of `context` if provided
+    # Both substitutions are skipped when the corresponding field is absent.
+    system_prompt: Optional[str] = Field(None, description="System prompt template with optional $PATH/$CONTEXT bindings")
+    path: Optional[str] = Field(None, description="Value substituted for $PATH in system_prompt")
+    context: Optional[str] = Field(None, description="Value substituted for $CONTEXT in system_prompt")
+    # null (default) — no tools are bound to the model
+    # "*"            — all registered tools are bound (ALL_TOOLS: CRUD, Conversations, find_entities)
+    #                  new tool groups added to ALL_TOOLS are automatically included
+    tools: Optional[str] = Field(None, description="Tool set to enable: null = none, '*' = all registered tools")
+
+
 class McpCompletionRequest(BaseModel):
     """Request for completion with MCP tools."""
     prompt: str = Field(..., description="The prompt for completion")

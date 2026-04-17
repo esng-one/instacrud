@@ -23,4 +23,8 @@ class ConversationCreate(BaseModel):
     messages: List[ConversationMessage] = []
     model_id: Optional[str] = None
     last_message_at: Optional[datetime] = None
+    system_prompt: Optional[str] = None
+    path: Optional[str] = None
+    context: Optional[str] = None
+    tools: Optional[str] = None
  

@@ -19,6 +19,12 @@ interface UseConversationOptions {
   chatModelId: string | null;
   setChatModelId: (id: string | null) => void;
   mode: "chat" | "image-gen";
+  // Optional initial AI parameters — used when starting a fresh conversation (e.g. from the in-page panel).
+  // Stored values in an existing conversation always take precedence.
+  initialSystemPrompt?: string | null;
+  initialPath?: string | null;
+  initialContext?: string | null;
+  initialTools?: string | null;
 }
 
 interface UseConversationReturn {
@@ -38,6 +44,18 @@ interface UseConversationReturn {
   handleDeleteAllConversations: () => Promise<void>;
   handleResyncData: () => Promise<void>;
   handleTempModeToggle: (mode: "chat" | "image-gen") => void;
+  // Conversation-level AI parameters (set at initialisation, empty in the default AI assistant)
+  systemPrompt: string | null;
+  path: string | null;
+  context: string | null;
+  tools: string | null;
+  /** Update one or more AI params in-place (used by InPageChat to sync live page context). */
+  updateAiParams: (params: {
+    systemPrompt?: string | null;
+    path?: string | null;
+    context?: string | null;
+    tools?: string | null;
+  }) => void;
 }
 
 export function useConversation({
@@ -45,12 +63,20 @@ export function useConversation({
   chatModelId,
   setChatModelId,
   mode,
+  initialSystemPrompt = null,
+  initialPath = null,
+  initialContext = null,
+  initialTools = null,
 }: UseConversationOptions): UseConversationReturn {
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversationTitle, setConversationTitle] = useState<string>("");
   const [allConversations, setAllConversations] = useState<LocalConversation[]>([]);
   const [isTempMode, setIsTempMode] = useState(false);
+  const [systemPrompt, setSystemPrompt] = useState<string | null>(initialSystemPrompt);
+  const [path, setPath] = useState<string | null>(initialPath);
+  const [context, setContext] = useState<string | null>(initialContext);
+  const [tools, setFunctions] = useState<string | null>(initialTools);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const shouldScrollToBottomRef = useRef<boolean>(false);
 
@@ -58,6 +84,8 @@ export function useConversation({
   useEffect(() => {
     const loadConversation = async () => {
       setIsTempMode(false);
+      setMessages([]);
+      setConversationTitle("");
 
       const localConversation = await conversationStorage.get(conversationId);
 
@@ -74,6 +102,10 @@ export function useConversation({
         if (localConversation.modelId) {
           setChatModelId(localConversation.modelId);
         }
+        setSystemPrompt(localConversation.systemPrompt ?? initialSystemPrompt);
+        setPath(localConversation.path ?? initialPath);
+        setContext(localConversation.context ?? initialContext);
+        setFunctions(localConversation.tools ?? initialTools);
 
         setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
@@ -102,6 +134,10 @@ export function useConversation({
             if (updatedConversation.modelId) {
               setChatModelId(updatedConversation.modelId);
             }
+            setSystemPrompt(updatedConversation.systemPrompt ?? initialSystemPrompt);
+            setPath(updatedConversation.path ?? initialPath);
+            setContext(updatedConversation.context ?? initialContext);
+            setFunctions(updatedConversation.tools ?? initialTools);
           } else if (localTime > serverTime) {
             await syncConversationToServer(conversationId, localConversation);
           }
@@ -120,6 +156,10 @@ export function useConversation({
           if (updatedConversation.modelId) {
             setChatModelId(updatedConversation.modelId);
           }
+          setSystemPrompt(updatedConversation.systemPrompt ?? initialSystemPrompt);
+          setPath(updatedConversation.path ?? initialPath);
+          setContext(updatedConversation.context ?? initialContext);
+          setFunctions(updatedConversation.tools ?? initialTools);
 
           setTimeout(() => {
             messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
@@ -207,6 +247,10 @@ export function useConversation({
           lastMessageAt: shouldUpdateTimestamp
             ? new Date().toISOString()
             : existingConversation?.lastMessageAt || new Date().toISOString(),
+          systemPrompt,
+          path,
+          context,
+          tools,
         };
 
         await conversationStorage.save(conversationId, conversation);
@@ -220,7 +264,7 @@ export function useConversation({
         }
       }
     },
-    [conversationId, messages, conversationTitle, chatModelId, isTempMode]
+    [conversationId, messages, conversationTitle, chatModelId, isTempMode, systemPrompt, path, context, tools]
   );
 
   // Auto-save on changes
@@ -329,6 +373,21 @@ export function useConversation({
     [isTempMode, handleNewChat]
   );
 
+  const updateAiParams = useCallback(
+    (params: {
+      systemPrompt?: string | null;
+      path?: string | null;
+      context?: string | null;
+      tools?: string | null;
+    }) => {
+      if (params.systemPrompt !== undefined) setSystemPrompt(params.systemPrompt);
+      if (params.path !== undefined) setPath(params.path);
+      if (params.context !== undefined) setContext(params.context);
+      if (params.tools !== undefined) setFunctions(params.tools);
+    },
+    []
+  );
+
   return {
     messages,
     setMessages,
@@ -346,5 +405,10 @@ export function useConversation({
     handleDeleteAllConversations,
     handleResyncData,
     handleTempModeToggle,
+    systemPrompt,
+    path,
+    context,
+    tools,
+    updateAiParams,
   };
 }

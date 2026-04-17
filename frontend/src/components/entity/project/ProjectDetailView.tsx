@@ -143,6 +143,7 @@ export default function ProjectDetailView({
               { label: "Description", field: "description" },
             ]}
             modelName="Client"
+            publishAiContext={false}
           />
         </div>
       )}
