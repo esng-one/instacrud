@@ -9,6 +9,7 @@ import type { UserUpdate } from "@/api/models/UserUpdate";
 import type { UserCreate } from "@/api/models/UserCreate";
 import type { OrganizationResponse } from "@/api/models/OrganizationResponse";
 import useCurrentUser from "@/hooks/useCurrentUser";
+import { useMeContext } from "@/context/MeContext";
 import { useOrganizationReferenceField } from "@/hooks/useOrganizationReferenceField";
 
 // Create a common type for form fields that works with both UserCreate and UserUpdate
@@ -36,7 +37,16 @@ export default function UserEditView({
   selectedOrganizationId,
 }: UserEditViewProps) {
   const { currentUser } = useCurrentUser();
-  const { options: organizationOptions, loading: loadingOrganizations } = useOrganizationReferenceField(0, currentUser?.role === "ADMIN");
+  const { me } = useMeContext();
+  const isAdmin = currentUser?.role === "ADMIN";
+  const { options: fetchedOrgOptions, loading: loadingOrganizations } = useOrganizationReferenceField(0, isAdmin);
+
+  // For non-ADMIN, synthesize a single option from MeContext so the disabled field shows the org name
+  const organizationOptions = isAdmin
+    ? fetchedOrgOptions
+    : me?.organization
+      ? [{ value: me.organization.id, label: me.organization.name, original: {} as OrganizationResponse }]
+      : [];
 
   // Form fields for user editing
   const formFields: EditField<CommonUserFields, OrganizationResponse>[] = useMemo(() => {
