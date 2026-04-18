@@ -5,7 +5,7 @@ import { useReferenceField } from "./useReferenceField";
 import { AdminService } from "@/api/services/AdminService";
 import type { OrganizationResponse } from "@/api/models/OrganizationResponse";
 
-export function useOrganizationReferenceField(refreshKey: number = 0) {
+export function useOrganizationReferenceField(refreshKey: number = 0, enabled: boolean = true) {
   const fetchFn = useCallback(() => AdminService.listOrganizationsAdminOrganizationsGet(), []);
   const getValue = useCallback((org: OrganizationResponse) => org.id, []);
   const getLabel = useCallback((org: OrganizationResponse) => org.name, []);
@@ -14,6 +14,7 @@ export function useOrganizationReferenceField(refreshKey: number = 0) {
     fetchFn,
     getValue,
     getLabel,
-    refreshKey
+    refreshKey,
+    enabled,
   );
 }

@@ -49,8 +49,8 @@ export default function InvitationsPage() {
     effectiveTurnstileEnabled,
   } = useTurnstileSettings({ submitting });
 
-  // Organization reference field
-  const { options: organizationOptions, loading: organizationsLoading } = useOrganizationReferenceField();
+  // Organization reference field — only ADMIN can list all organizations
+  const { options: organizationOptions, loading: organizationsLoading } = useOrganizationReferenceField(0, currentUser?.role === "ADMIN");
 
   // Handler for organization selector change
   const handleOrganizationChange = (field: keyof any, value: string | number | null) => {

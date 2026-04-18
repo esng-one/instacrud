@@ -36,7 +36,7 @@ export default function UserEditView({
   selectedOrganizationId,
 }: UserEditViewProps) {
   const { currentUser } = useCurrentUser();
-  const { options: organizationOptions, loading: loadingOrganizations } = useOrganizationReferenceField();
+  const { options: organizationOptions, loading: loadingOrganizations } = useOrganizationReferenceField(0, currentUser?.role === "ADMIN");
 
   // Form fields for user editing
   const formFields: EditField<CommonUserFields, OrganizationResponse>[] = useMemo(() => {

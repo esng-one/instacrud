@@ -99,20 +99,9 @@ DUMMY_PASSWORD_HASH = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYqKe6JV
 
 @router.get("/admin/organizations", response_model=List[OrganizationResponse], tags=["admin"])
 async def list_organizations(
-    _: Annotated[None, Depends(role_required(Role.ADMIN, Role.ORG_ADMIN))]
+    _: Annotated[None, Depends(role_required(Role.ADMIN))]
 ):
-    user_ctx = current_user_context.get()
-    
-    # List organizations based on user role: all for ADMIN and only assigned for ORG_ADMIN
-    if user_ctx.role == Role.ORG_ADMIN:
-        # For ORG_ADMIN, find organization by ObjectId (not string)
-        organization = await Organization.get(user_ctx.organization_id)
-        organizations = [organization] if organization else []
-    elif user_ctx.role == Role.ADMIN:
-        organizations = await Organization.find_all().to_list()
-    else:
-        raise HTTPException(status_code=403, detail="Not authorized to access organizations")
-        
+    organizations = await Organization.find_all().to_list()
     return [
         OrganizationResponse(
             id=str(org.id),
@@ -182,24 +171,19 @@ async def onboard_organization(
 @router.get("/admin/organizations/{organization_id}", response_model=OrganizationResponse, tags=["admin"])
 async def get_organization(
     organization_id: str,
+    _: Annotated[None, Depends(role_required(Role.ADMIN))],
 ):
-    user_ctx = current_user_context.get()
-
-    if organization_id == None or organization_id == "None" or organization_id == "":
+    if not organization_id or organization_id == "None":
         return OrganizationResponse(
-            id= "",
-            name= "No Organization",
-            code= "",
-            description= "This user is not assigned to any organization.",
-            status= "ACTIVE",
-            tier_id= None
+            id="",
+            name="No Organization",
+            code="",
+            description="This user is not assigned to any organization.",
+            status="ACTIVE",
+            tier_id=None
         )
 
-    if user_ctx.role != Role.ADMIN:
-        organization_id = user_ctx.organization_id
-
     org = await Organization.get(organization_id)
-    
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
 
@@ -218,24 +202,17 @@ async def get_organization(
 async def update_organization(
     organization_id: str,
     data: OrganizationUpdate,
-    _: Annotated[None, Depends(role_required(Role.ADMIN, Role.ORG_ADMIN))]
+    _: Annotated[None, Depends(role_required(Role.ADMIN))]
 ):
     org = await Organization.get(organization_id)
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
-
-    user_ctx = current_user_context.get()
-    if user_ctx.role == Role.ORG_ADMIN and str(org.id) != user_ctx.organization_id:
-        raise HTTPException(status_code=403, detail="Not authorized to update this organization")
 
     if data.name is not None:
         org.name = data.name
     if data.description is not None:
         org.description = data.description
     if data.tier_id is not None:
-        # Only ADMIN can change tier
-        if user_ctx.role != Role.ADMIN:
-            raise HTTPException(status_code=403, detail="Only admins can change organization tier")
         org.tier_id = PydanticObjectId(data.tier_id) if data.tier_id else None
     if data.local_only_conversations is not None:
         org.local_only_conversations = data.local_only_conversations

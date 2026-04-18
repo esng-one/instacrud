@@ -123,6 +123,39 @@ async def test_integration_lifecycle(http_client: httpx.AsyncClient, clean_db, t
     user_token = resp.json()["access_token"]
     headers_user = {"Authorization": f"Bearer {user_token}"}
 
+    # GET /me — verify response shape and identity
+    resp = await http_client.get("/api/v1/me", headers=headers_user)
+    assert resp.status_code == 200
+    me = resp.json()
+    assert me["user"]["email"] == TEST_USER_EMAIL
+    assert me["user"]["role"] == "USER"
+    assert me["user"]["has_password"] is True
+    assert me["organization"] is not None
+    assert me["organization"]["id"] == org_id
+    assert "usage" in me
+
+    # PATCH /me — update name
+    resp = await http_client.patch("/api/v1/me", json={"name": "Updated Name"}, headers=headers_user)
+    assert resp.status_code == 200
+    assert resp.json()["user"]["name"] == "Updated Name"
+
+    # Verify DB was updated
+    updated_user = await User.find_one({"email": TEST_USER_EMAIL})
+    assert updated_user is not None
+    assert updated_user.name == "Updated Name"
+
+    # PATCH /me contract: missing required name → 422
+    resp = await http_client.patch("/api/v1/me", json={}, headers=headers_user)
+    assert resp.status_code == 422, f"Empty body should return 422, got {resp.status_code}"
+
+    # PATCH /me contract: null name → 422
+    resp = await http_client.patch("/api/v1/me", json={"name": None}, headers=headers_user)
+    assert resp.status_code == 422, f"null name should return 422, got {resp.status_code}"
+
+    # PATCH /me contract: whitespace-only name → 422 (NonEmptyStr strips then checks min_length=1)
+    resp = await http_client.patch("/api/v1/me", json={"name": "   "}, headers=headers_user)
+    assert resp.status_code == 422, f"Whitespace-only name should return 422, got {resp.status_code}"
+
     # Create clients
     for i in range(2):
         resp = await http_client.post("/api/v1/clients", json={
@@ -186,6 +219,10 @@ async def test_integration_lifecycle(http_client: httpx.AsyncClient, clean_db, t
     })
     ro_token = resp.json()["access_token"]
     headers_ro_user = {"Authorization": f"Bearer {ro_token}"}
+
+    # RO_USER cannot update their own profile (PATCH /me is restricted to USER and above)
+    resp = await http_client.patch("/api/v1/me", json={"name": "Hacked Name"}, headers=headers_ro_user)
+    assert resp.status_code == 403, f"RO_USER should get 403 on PATCH /me, got {resp.status_code}"
 
     # RO_USER tries to modify document (should fail)
     resp = await http_client.put(f"/api/v1/documents/{document['_id']}", json={

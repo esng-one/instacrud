@@ -1,7 +1,7 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import useCurrentUser from "@/hooks/useCurrentUser";
-import { AdminService } from "@/api/services/AdminService";
+import React, { useState } from "react";
+import useMe from "@/hooks/useMe";
+import { MeService } from "@/api/services/MeService";
 import { SystemService } from "@/api/services/SystemService";
 import { formatEnum, useTailwindMuiTheme } from "@/app/lib/util";
 import Button from "@/components/ui/button/Button";
@@ -16,10 +16,9 @@ import { useRouter } from "next/navigation";
 import { logout } from "@/app/lib/util";
 
 export default function UserInfoCard() {
-  const { currentUser, isLoading } = useCurrentUser();
+  const { me, isLoading, updateMe } = useMe();
   const router = useRouter();
   const theme = useTailwindMuiTheme();
-  const [organizationName, setOrganizationName] = useState<string>("");
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -28,21 +27,10 @@ export default function UserInfoCard() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    const fetchOrganizationInfo = async () => {
-      if (currentUser?.organization_id) {
-        try {
-          const orgData = await AdminService.getOrganizationAdminOrganizationsOrganizationIdGet(currentUser.organization_id);
-          setOrganizationName(orgData.name);
-        } catch (error) {
-          console.error("Failed to fetch organization info:", error);
-        }
-      }
-    };
-
-    fetchOrganizationInfo();
-  }, [currentUser?.organization_id]);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
+  const [isEditProfileSubmitting, setIsEditProfileSubmitting] = useState(false);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,6 +68,28 @@ export default function UserInfoCard() {
     logout(router, undefined, "/forgot-password");
   };
 
+  const openEditProfile = () => {
+    setEditFirstName(firstName);
+    setEditLastName(lastName);
+    setIsEditProfileModalOpen(true);
+  };
+
+  const handleEditProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = [editFirstName.trim(), editLastName.trim()].filter(Boolean).join(" ");
+    setIsEditProfileSubmitting(true);
+    try {
+      const saved = await MeService.patchMeMePatch({ name });
+      updateMe(saved);
+      toast.success("Profile updated successfully!");
+      setIsEditProfileModalOpen(false);
+    } catch (error) {
+      toast.error(getApiErrorDetail(error) as string);
+    } finally {
+      setIsEditProfileSubmitting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
@@ -98,10 +108,10 @@ export default function UserInfoCard() {
     );
   }
 
-  const nameParts = currentUser?.name?.split(' ') || [];
+  const nameParts = me?.user.name?.split(' ') || [];
   const firstName = nameParts[0] || '';
   const lastName = nameParts.slice(1).join(' ') || '';
-  const hasPassword = currentUser?.has_password ?? true;
+  const hasPassword = me?.user.has_password ?? true;
 
   return (
     <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
@@ -135,7 +145,7 @@ export default function UserInfoCard() {
                 Email Address
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {currentUser?.email || 'N/A'}
+                {me?.user.email || 'N/A'}
               </p>
             </div>
 
@@ -144,22 +154,21 @@ export default function UserInfoCard() {
                 Role
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {formatEnum(currentUser?.role ?? "")}
-              </p>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Organization Name
-              </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                {organizationName || 'N/A'}
+                {formatEnum(me?.user.role ?? "")}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="pt-6 border-t border-gray-200 dark:border-gray-800">
+        <div className="flex gap-3 pt-6 border-t border-gray-200 dark:border-gray-800">
+          {me?.user.role !== 'RO_USER' && (
+            <Button
+              onClick={openEditProfile}
+              variant="outline"
+            >
+              Edit Profile
+            </Button>
+          )}
           {hasPassword ? (
             <Button
               onClick={() => setIsChangePasswordModalOpen(true)}
@@ -320,6 +329,68 @@ export default function UserInfoCard() {
             </div>
           </form>
         </div>
+        </ThemeProvider>
+      </Modal>
+      <Modal
+        isOpen={isEditProfileModalOpen}
+        onClose={() => setIsEditProfileModalOpen(false)}
+        className="max-w-[500px] m-4"
+      >
+        <ThemeProvider theme={theme}>
+          <div className="relative mx-auto max-w-[500px] m-4 overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
+            <div className="px-2 pr-14">
+              <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
+                Edit Profile
+              </h4>
+              <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
+                Update your display name.
+              </p>
+            </div>
+
+            <form onSubmit={handleEditProfile} className="flex flex-col">
+              <div className="custom-scrollbar overflow-y-auto px-2 pb-3">
+                <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor="editFirstName">First Name</Label>
+                    <Input
+                      id="editFirstName"
+                      type="text"
+                      required
+                      value={editFirstName}
+                      onChange={(e) => setEditFirstName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="editLastName">Last Name</Label>
+                    <Input
+                      id="editLastName"
+                      type="text"
+                      value={editLastName}
+                      onChange={(e) => setEditLastName(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-7 flex gap-3 px-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditProfileModalOpen(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isEditProfileSubmitting || !editFirstName.trim()}
+                  className="flex-1"
+                >
+                  {isEditProfileSubmitting ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </form>
+          </div>
         </ThemeProvider>
       </Modal>
     </div>

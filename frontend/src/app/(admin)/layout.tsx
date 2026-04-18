@@ -5,6 +5,7 @@ import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import AuthGuard from "@/components/auth/AuthGuard";
 import ProvisioningGuard from "@/components/auth/ProvisioningGuard";
+import { MeProvider } from "@/context/MeContext";
 import Backdrop from "@/layout/Backdrop";
 import React, { useEffect } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -98,11 +99,13 @@ export default function AdminLayout({
 }) {
   return (
     <AuthGuard>
+      <MeProvider>
       <ProvisioningGuard>
         <AiPanelProvider>
           <AdminLayoutInner>{children}</AdminLayoutInner>
         </AiPanelProvider>
       </ProvisioningGuard>
+      </MeProvider>
     </AuthGuard>
   );
 }
