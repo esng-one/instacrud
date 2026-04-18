@@ -37,14 +37,18 @@ export default function OrganizationSettingsPage() {
   }, [roleLoading, isOrgAdmin]);
 
   const handleSave = async (updated: MeOrganizationResponse) => {
-    const saved = await MeService.patchMeOrganizationMeOrganizationPatch({
-      name: updated.name,
-      description: updated.description,
-      local_only_conversations: updated.local_only_conversations,
-    });
-    setOrg(saved);
-    toast.success("Organization settings saved");
-    closeModal();
+    try {
+      const saved = await MeService.patchMeOrganizationMeOrganizationPatch({
+        name: updated.name,
+        description: updated.description,
+        local_only_conversations: updated.local_only_conversations,
+      });
+      setOrg(saved);
+      toast.success("Organization settings saved");
+      closeModal();
+    } catch {
+      toast.error("Failed to save organization settings");
+    }
   };
 
   if (roleLoading || loading) {

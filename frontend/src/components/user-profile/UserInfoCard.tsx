@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import useMe from "@/hooks/useMe";
+import { MeService } from "@/api/services/MeService";
 import { SystemService } from "@/api/services/SystemService";
 import { formatEnum, useTailwindMuiTheme } from "@/app/lib/util";
 import Button from "@/components/ui/button/Button";
@@ -15,7 +16,7 @@ import { useRouter } from "next/navigation";
 import { logout } from "@/app/lib/util";
 
 export default function UserInfoCard() {
-  const { me, isLoading } = useMe();
+  const { me, isLoading, updateMe } = useMe();
   const router = useRouter();
   const theme = useTailwindMuiTheme();
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
@@ -26,6 +27,10 @@ export default function UserInfoCard() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
+  const [isEditProfileSubmitting, setIsEditProfileSubmitting] = useState(false);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +66,28 @@ export default function UserInfoCard() {
 
   const handleResetPassword = () => {
     logout(router, undefined, "/forgot-password");
+  };
+
+  const openEditProfile = () => {
+    setEditFirstName(firstName);
+    setEditLastName(lastName);
+    setIsEditProfileModalOpen(true);
+  };
+
+  const handleEditProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = [editFirstName.trim(), editLastName.trim()].filter(Boolean).join(" ");
+    setIsEditProfileSubmitting(true);
+    try {
+      const saved = await MeService.patchMeMePatch({ name });
+      updateMe(saved);
+      toast.success("Profile updated successfully!");
+      setIsEditProfileModalOpen(false);
+    } catch (error) {
+      toast.error(getApiErrorDetail(error) as string);
+    } finally {
+      setIsEditProfileSubmitting(false);
+    }
   };
 
   if (isLoading) {
@@ -133,7 +160,15 @@ export default function UserInfoCard() {
           </div>
         </div>
 
-        <div className="pt-6 border-t border-gray-200 dark:border-gray-800">
+        <div className="flex gap-3 pt-6 border-t border-gray-200 dark:border-gray-800">
+          {me?.user.role !== 'RO_USER' && (
+            <Button
+              onClick={openEditProfile}
+              variant="outline"
+            >
+              Edit Profile
+            </Button>
+          )}
           {hasPassword ? (
             <Button
               onClick={() => setIsChangePasswordModalOpen(true)}
@@ -294,6 +329,68 @@ export default function UserInfoCard() {
             </div>
           </form>
         </div>
+        </ThemeProvider>
+      </Modal>
+      <Modal
+        isOpen={isEditProfileModalOpen}
+        onClose={() => setIsEditProfileModalOpen(false)}
+        className="max-w-[500px] m-4"
+      >
+        <ThemeProvider theme={theme}>
+          <div className="relative mx-auto max-w-[500px] m-4 overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
+            <div className="px-2 pr-14">
+              <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
+                Edit Profile
+              </h4>
+              <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
+                Update your display name.
+              </p>
+            </div>
+
+            <form onSubmit={handleEditProfile} className="flex flex-col">
+              <div className="custom-scrollbar overflow-y-auto px-2 pb-3">
+                <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor="editFirstName">First Name</Label>
+                    <Input
+                      id="editFirstName"
+                      type="text"
+                      required
+                      value={editFirstName}
+                      onChange={(e) => setEditFirstName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="editLastName">Last Name</Label>
+                    <Input
+                      id="editLastName"
+                      type="text"
+                      value={editLastName}
+                      onChange={(e) => setEditLastName(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-7 flex gap-3 px-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditProfileModalOpen(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isEditProfileSubmitting || !editFirstName.trim()}
+                  className="flex-1"
+                >
+                  {isEditProfileSubmitting ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </form>
+          </div>
         </ThemeProvider>
       </Modal>
     </div>

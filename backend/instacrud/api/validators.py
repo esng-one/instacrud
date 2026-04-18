@@ -2,15 +2,17 @@
 from datetime import datetime, timezone
 from fastapi import HTTPException
 from loguru import logger
-from pydantic import constr, field_validator, model_validator
+from pydantic import StringConstraints, field_validator, model_validator
 from beanie import Document, PydanticObjectId
 from pymongo.errors import DuplicateKeyError
-from typing import Any, Type, List
+from typing import Annotated, Any, Type, List
 
 # -----------------------------------------
 # BASIC REUSABLE TYPE ALIASES
 # -----------------------------------------
-NonEmptyStr = constr(strip_whitespace=True, min_length=1)
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+NameStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+DescriptionStr = Annotated[str, StringConstraints(strip_whitespace=True, max_length=2000)]
 ObjectIdRef = PydanticObjectId  # use NormalizeInputMixin to handle blanks
 
 

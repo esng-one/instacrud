@@ -112,6 +112,13 @@ async def test_me_organization_endpoints(http_client: httpx.AsyncClient, clean_d
     assert "code" not in org_info, "MeOrgInfo must not expose code"
 
     # =====================================================================
+    # Test 1b: PATCH /me — ADMIN can update their own name
+    # =====================================================================
+    resp = await http_client.patch("/api/v1/me", json={"name": "Updated Admin"}, headers=headers_admin)
+    assert resp.status_code == 200, f"ADMIN should be able to PATCH /me, got {resp.status_code}"
+    assert resp.json()["user"]["name"] == "Updated Admin"
+
+    # =====================================================================
     # Test 2: GET /me/organization — ORG_ADMIN gets full org details
     # =====================================================================
     resp = await http_client.get("/api/v1/me/organization", headers=headers_org_admin)
@@ -151,6 +158,26 @@ async def test_me_organization_endpoints(http_client: httpx.AsyncClient, clean_d
     assert updated["name"] == "Updated Org Name"
     assert updated["description"] == "Updated description"
     assert updated["local_only_conversations"] is True
+
+    # =====================================================================
+    # Test 5b: PATCH /me/organization — empty string clears description to null
+    # =====================================================================
+    resp = await http_client.patch("/api/v1/me/organization", json={
+        "description": "",
+    }, headers=headers_org_admin)
+    assert resp.status_code == 200
+    assert resp.json()["description"] is None, \
+        "Empty string should clear description to null"
+
+    # =====================================================================
+    # Test 5c: PATCH /me/organization — extra field rejected (extra="forbid")
+    # =====================================================================
+    resp = await http_client.patch("/api/v1/me/organization", json={
+        "name": "Valid Name",
+        "tier_id": "abc123",
+    }, headers=headers_org_admin)
+    assert resp.status_code == 422, \
+        f"Extra field 'tier_id' should be rejected with 422, got {resp.status_code}"
 
     # =====================================================================
     # Test 6: PATCH /me/organization — regular USER gets 403

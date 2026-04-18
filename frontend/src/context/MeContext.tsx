@@ -40,6 +40,7 @@ interface MeContextValue {
   me: MeResponse | null;
   isLoading: boolean;
   refetch: () => Promise<void>;
+  updateMe: (data: MeResponse) => void;
 }
 
 const MeContext = createContext<MeContextValue | undefined>(undefined);
@@ -80,8 +81,13 @@ export function MeProvider({ children }: { children: React.ReactNode }) {
     fetchMe();
   }, [fetchMe]);
 
+  const updateMe = useCallback((data: MeResponse) => {
+    setMe(data);
+    writeCache(data);
+  }, []);
+
   return (
-    <MeContext.Provider value={{ me, isLoading, refetch: fetchMe }}>
+    <MeContext.Provider value={{ me, isLoading, refetch: fetchMe, updateMe }}>
       {children}
     </MeContext.Provider>
   );

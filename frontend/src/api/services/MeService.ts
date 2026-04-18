@@ -24,7 +24,7 @@ export class MeService {
     }
     /**
      * Patch Me
-     * Update allowed fields (name, email) of the currently authenticated user.
+     * Update the currently authenticated user.
      * @param requestBody
      * @returns MeResponse Successful Response
      * @throws ApiError

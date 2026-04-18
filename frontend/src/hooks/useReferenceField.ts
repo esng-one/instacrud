@@ -13,12 +13,17 @@ export function useReferenceField<T>(
   getValue: (item: T) => string | number,
   getLabel: (item: T) => string,
   refreshKey: number = 0,
+  enabled: boolean = true,
 ) {
   const [options, setOptions] = useState<ReferenceOption<T>[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [internalRefreshKey, setInternalRefreshKey] = useState(0);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     const load = async () => {
       try {
@@ -39,7 +44,7 @@ export function useReferenceField<T>(
 
     void load();
     return () => { cancelled = true; };
-  }, [fetchFn, getValue, getLabel, refreshKey, internalRefreshKey]);
+  }, [fetchFn, getValue, getLabel, refreshKey, internalRefreshKey, enabled]);
 
   const refetch = useCallback(() => {
     setInternalRefreshKey((k) => k + 1);

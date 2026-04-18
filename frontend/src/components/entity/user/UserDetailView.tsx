@@ -5,6 +5,7 @@ import { DetailField, EntityDetailView } from "@/components/entity/EntityDetailV
 import { formatEnum } from "@/app/lib/util";
 import type { UserResponse } from "@/api/models/UserResponse";
 import { useOrganizationReferenceField } from "@/hooks/useOrganizationReferenceField";
+import useCurrentUser from "@/hooks/useCurrentUser";
 import { CircularProgress } from "@mui/material";
 import Link from "next/link";
 
@@ -19,7 +20,8 @@ export default function UserDetailView({
   onEdit,
   detailExtras,
 }: UserDetailViewProps) {
-  const { options: organizationOptions, loading: loadingOrganizations } = useOrganizationReferenceField();
+  const { currentUser } = useCurrentUser();
+  const { options: organizationOptions, loading: loadingOrganizations } = useOrganizationReferenceField(0, currentUser?.role === "ADMIN");
 
   const detailFields: DetailField<UserResponse>[] = useMemo(() => [
     { label: "Email", field: "email" },

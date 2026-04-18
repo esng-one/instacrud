@@ -3,7 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 export type MeUpdateRequest = {
-    name?: (string | null);
-    email?: (string | null);
+    name: string;
 };
 
+
+export const MeUpdateRequestRequired = ["name"] as const;

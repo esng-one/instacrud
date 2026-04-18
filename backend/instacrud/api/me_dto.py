@@ -1,7 +1,8 @@
 # api/me_dto.py
 
 from typing import Optional
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict
+from instacrud.api.validators import DescriptionStr, NameStr
 
 
 class MeUserInfo(BaseModel):
@@ -41,9 +42,9 @@ class MeResponse(BaseModel):
 
 
 class MeUpdateRequest(BaseModel):
-    name: Optional[str] = None
-    email: Optional[EmailStr] = None
-    # local_only_conversations excluded — handled by PATCH /user-settings
+    model_config = ConfigDict(extra="forbid")
+
+    name: NameStr
 
 
 class MeOrganizationResponse(BaseModel):
@@ -56,6 +57,8 @@ class MeOrganizationResponse(BaseModel):
 
 
 class MeOrganizationUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    model_config = ConfigDict(extra="forbid")
+
+    name: Optional[NameStr] = None
+    description: Optional[DescriptionStr] = None
     local_only_conversations: Optional[bool] = None

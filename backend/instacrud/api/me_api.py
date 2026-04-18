@@ -1,6 +1,6 @@
 # api/me_api.py
 
-from typing import Annotated, Optional
+from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 from instacrud.ai.usage_tracker import UsageTracker
@@ -74,26 +74,28 @@ async def get_me(
 @router.patch("/me", response_model=MeResponse, tags=["me"])
 async def patch_me(
     data: MeUpdateRequest,
-    _: Annotated[None, Depends(role_required(Role.RO_USER, Role.USER, Role.ORG_ADMIN, Role.ADMIN))]
+    _: Annotated[None, Depends(role_required(Role.USER, Role.ORG_ADMIN, Role.ADMIN))]
 ):
-    """Update allowed fields (name, email) of the currently authenticated user."""
+    """Update the currently authenticated user."""
     ctx = current_user_context.get()
     user = await User.get(ctx.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if data.name is not None:
-        user.name = data.name
-
-    if data.email is not None:
-        # Explicit uniqueness check — email has a unique index; gives clean 409 vs raw DB error
-        existing = await User.find_one({"email": data.email.lower()})
-        if existing and existing.id != user.id:
-            raise HTTPException(status_code=409, detail="Email already in use")
-        user.email = data.email.lower()
-
+    user.name = data.name
     await user.save()
     return await _build_me_response(user)
+
+
+def _build_org_response(org: Organization) -> MeOrganizationResponse:
+    return MeOrganizationResponse(
+        id=str(org.id),
+        name=org.name,
+        code=org.code,
+        description=org.description,
+        local_only_conversations=org.local_only_conversations,
+        tier_id=str(org.tier_id) if org.tier_id else None,
+    )
 
 
 @router.get("/me/organization", response_model=MeOrganizationResponse, tags=["me"])
@@ -107,14 +109,7 @@ async def get_me_organization(
     org = await Organization.get(ctx.organization_id)
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
-    return MeOrganizationResponse(
-        id=str(org.id),
-        name=org.name,
-        code=org.code,
-        description=org.description,
-        local_only_conversations=org.local_only_conversations,
-        tier_id=str(org.tier_id) if org.tier_id else None,
-    )
+    return _build_org_response(org)
 
 
 @router.patch("/me/organization", response_model=MeOrganizationResponse, tags=["me"])
@@ -122,7 +117,10 @@ async def patch_me_organization(
     data: MeOrganizationUpdate,
     _: Annotated[None, Depends(role_required(Role.ORG_ADMIN))]
 ):
-    """Update allowed organization fields (name, description, local_only_conversations) for ORG_ADMIN."""
+    """Update allowed organization fields for ORG_ADMIN.
+
+    Omitting a field leaves it unchanged. Sending description as null or "" clears it.
+    """
     ctx = current_user_context.get()
     if not ctx.organization_id:
         raise HTTPException(status_code=404, detail="No organization assigned")
@@ -134,17 +132,10 @@ async def patch_me_organization(
 
     if data.name is not None:
         org.name = data.name
-    if data.description is not None:
-        org.description = data.description
+    if "description" in data.model_fields_set:
+        org.description = data.description or None
     if data.local_only_conversations is not None:
         org.local_only_conversations = data.local_only_conversations
 
     await org.save()
-    return MeOrganizationResponse(
-        id=str(org.id),
-        name=org.name,
-        code=org.code,
-        description=org.description,
-        local_only_conversations=org.local_only_conversations,
-        tier_id=str(org.tier_id) if org.tier_id else None,
-    )
+    return _build_org_response(org)

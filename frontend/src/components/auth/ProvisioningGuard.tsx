@@ -3,7 +3,9 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import useAuth from "@/hooks/useAuth";
+import { useMeContext } from "@/context/MeContext";
 import { MeService } from "@/api/services/MeService";
+import type { MeResponse } from "@/api/models/MeResponse";
 import AuthLoader from "@/components/auth/AuthLoader";
 import { getApiErrorInfo } from "@/app/lib/api-error";
 
@@ -28,8 +30,32 @@ function setCachedOrgStatus(orgId: string, status: string) {
   } catch {}
 }
 
+function resolveProvisioningStatus(me: MeResponse): "ready" | "provisioning" | "failed" {
+  if (!me.organization) {
+    return me.user.role === "ADMIN" ? "ready" : "failed";
+  }
+
+  const cached = getCachedOrgStatus(me.organization.id);
+  if (cached === "ACTIVE") return "ready";
+
+  switch (me.organization.status) {
+    case "PROVISIONING": return "provisioning";
+    case "FAILED": return "failed";
+    default:
+      setCachedOrgStatus(me.organization.id, me.organization.status ?? "ACTIVE");
+      return "ready";
+  }
+}
+
 export default function ProvisioningGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoadingAuth } = useAuth();
+  const { me, isLoading: meLoading } = useMeContext();
+
+  // Keep me in a ref so the effect can read the latest value without re-running
+  // when MeContext does a background stale-while-revalidate (~60s TTL). Without this,
+  // each revalidation would restart the effect, resetting the 5-minute provisioning timeout.
+  const meRef = useRef(me);
+  useEffect(() => { meRef.current = me; }, [me]);
 
   const [status, setStatus] = useState<"loading" | "provisioning" | "failed" | "ready">("loading");
 
@@ -46,7 +72,7 @@ export default function ProvisioningGuard({ children }: { children: React.ReactN
   };
 
   useEffect(() => {
-    if (!isAuthenticated || isLoadingAuth) return;
+    if (!isAuthenticated || isLoadingAuth || meLoading) return;
 
     let cancelled = false;
 
@@ -55,79 +81,75 @@ export default function ProvisioningGuard({ children }: { children: React.ReactN
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
 
-    const checkStatus = async () => {
+    const poll = async () => {
       try {
-        const me = await MeService.getMeMeGet();
-
+        const fresh = await MeService.getMeMeGet();
         if (cancelled) return;
-
-        // ADMIN with no org is always ready
-        if (!me.organization) {
-          if (me.user.role === "ADMIN") {
-            setStatus("ready");
-            stopPolling();
-            return;
-          }
-          setStatus("failed");
+        const freshStatus = resolveProvisioningStatus(fresh);
+        if (freshStatus !== "provisioning") {
+          setStatus(freshStatus);
           stopPolling();
-          return;
-        }
-
-        const orgId = me.organization.id;
-        const orgStatus = me.organization.status;
-
-        // Skip further polling if we already know the org is active
-        const cachedStatus = getCachedOrgStatus(orgId);
-        if (cachedStatus === "ACTIVE") {
-          setStatus("ready");
-          stopPolling();
-          return;
-        }
-
-        switch (orgStatus) {
-          case "PROVISIONING":
-            setStatus("provisioning");
-            break;
-
-          case "FAILED":
-            setStatus("failed");
-            stopPolling();
-            break;
-
-          default:
-            setCachedOrgStatus(orgId, orgStatus ?? "ACTIVE");
-            setStatus("ready");
-            stopPolling();
         }
       } catch (err) {
-        const { status } = getApiErrorInfo(err);
-        if (status === 403 || status === 404 || status === 501) {
-          console.error("Provisioning check failed", err);
+        if (cancelled) return;
+        const { status: httpStatus } = getApiErrorInfo(err);
+        if (httpStatus === 403 || httpStatus === 404 || httpStatus === 501) {
           setStatus("failed");
           stopPolling();
         }
+        // Transient errors (network, 5xx): keep polling
       }
     };
 
-    // initial check
-    checkStatus();
+    const startPolling = () => {
+      intervalRef.current = setInterval(poll, POLL_INTERVAL);
+      timeoutRef.current = setTimeout(() => {
+        setStatus("failed");
+        stopPolling();
+      }, PROVISIONING_TIMEOUT);
+    };
 
-    // polling only needed when provisioning is in progress
-    intervalRef.current = setInterval(checkStatus, POLL_INTERVAL);
+    const initialCheck = async () => {
+      let meData = meRef.current;
 
-    // global timeout
-    timeoutRef.current = setTimeout(() => {
-      setStatus("failed");
-      stopPolling();
-    }, PROVISIONING_TIMEOUT);
+      // MeContext sets me=null on any fetch error. Fall back to a direct call so that
+      // transient network errors don't permanently show "Provisioning Failed".
+      if (meData === null) {
+        try {
+          meData = await MeService.getMeMeGet();
+        } catch (err) {
+          if (cancelled) return;
+          const { status: httpStatus } = getApiErrorInfo(err);
+          if (httpStatus === 403 || httpStatus === 404 || httpStatus === 501) {
+            setStatus("failed");
+          } else {
+            // Transient error: start polling so the 5-minute timeout eventually shows the
+            // "failed" screen with a Retry button rather than leaving the spinner forever.
+            startPolling();
+          }
+          return;
+        }
+      }
+
+      if (cancelled) return;
+
+      const resolved = resolveProvisioningStatus(meData);
+      setStatus(resolved);
+
+      if (resolved === "provisioning") {
+        startPolling();
+      }
+    };
+
+    initialCheck();
 
     return () => {
       cancelled = true;
       stopPolling();
     };
-  }, [isAuthenticated, isLoadingAuth]);
+  }, [isAuthenticated, isLoadingAuth, meLoading]); // me intentionally excluded — read via meRef
 
-  if (isLoadingAuth || status === "loading") {
+  if (isLoadingAuth || meLoading || status === "loading") {
     return <AuthLoader />;
   }
 

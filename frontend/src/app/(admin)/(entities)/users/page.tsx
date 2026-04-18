@@ -60,8 +60,8 @@ export default function UsersPage() {
     effectiveTurnstileEnabled,
   } = useTurnstileSettings({ submitting: inviteSubmitting });
 
-  // Organization reference field
-  const { options: organizationOptions, loading: organizationsLoading } = useOrganizationReferenceField();
+  // Organization reference field — only ADMIN can list all organizations
+  const { options: organizationOptions, loading: organizationsLoading } = useOrganizationReferenceField(0, currentUser?.role === "ADMIN");
 
   // Add "Global Administrators" as the first option for admin users
   const extendedOrganizationOptions = useMemo(() => {
