@@ -19,6 +19,7 @@ interface EntityGridProps<T> {
   onDelete?: (id: string, row: T) => void;
   hideFooter?: boolean;
   loading?: boolean;
+  navigateField?: string;
 }
 
 /**
@@ -37,6 +38,7 @@ export function EntityGrid<T extends Record<string, unknown>>({
   onDelete,
   hideFooter,
   loading = false,
+  navigateField = "name",
 }: EntityGridProps<T>) {
   // Map items so DataGrid can use a unique 'id' property
   const gridRows = rows.map((row) => ({ ...row, id: row[idKey] }));
@@ -76,9 +78,13 @@ export function EntityGrid<T extends Record<string, unknown>>({
     },
   };
 
-  // Inject a clickable link on the "name" column instead of using row-level click
+  // Inject a clickable link on the navigateField column if it has no existing renderCell.
+  // If the column already has a renderCell (or doesn't exist), fall back to row-level click.
+  const shouldInjectLink = !!onRowClick && columns.some(
+    (col) => col.field === navigateField && !col.renderCell
+  );
   const gridColumns = columns.map((col) => {
-    if (col.field === "name" && onRowClick && !col.renderCell) {
+    if (col.field === navigateField && shouldInjectLink) {
       return {
         ...col,
         renderCell: (params: GridRenderCellParams) => (
@@ -114,6 +120,8 @@ export function EntityGrid<T extends Record<string, unknown>>({
         onPaginationModelChange={(model) =>
           onPageChange?.(model.page, model.pageSize)
         }
+        onRowClick={!shouldInjectLink && onRowClick ? (params: GridRowParams) => onRowClick(params.id as string) : undefined}
+        sx={!shouldInjectLink && onRowClick ? { "& .MuiDataGrid-row": { cursor: "pointer" } } : undefined}
         autoHeight
         localeText={{
           paginationDisplayedRows: ({ from, to }: { from: number; to: number }) =>
