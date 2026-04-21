@@ -7,7 +7,7 @@ import React, {
   useMemo,
   useEffect,
 } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useAiPanel } from "@/context/AiPanelContext";
 import { useAiModels } from "@/app/(admin)/(others-pages)/ai-assistant/hooks/useAiModels";
 import { useConversation } from "@/app/(admin)/(others-pages)/ai-assistant/hooks/useConversation";
@@ -28,6 +28,14 @@ const GENERIC_SYSTEM_PROMPT =
   "The current page content is:\n$CONTEXT\n\n" +
   "Help the user understand, navigate, or act on what they see.";
 
+/** Maps URL path segments (plural) to the Beanie model name used in crud_get/crud_list. */
+const PATH_TO_MODEL: Record<string, string> = {
+  projects: "Project",
+  clients: "Client",
+  contacts: "Contact",
+  addresses: "Address",
+};
+
 const MAX_RENDERED_MESSAGES = 50;
 
 export function InPageChat() {
@@ -40,6 +48,8 @@ export function InPageChat() {
   } = useAiPanel();
 
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const fullPath = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname;
 
   const [input, setInput] = useState("");
   const [reasoningContent, setReasoningContent] = useState<string | null>(null);
@@ -49,9 +59,17 @@ export function InPageChat() {
   // Plain expression — no useMemo — so we don't change the hook call order
   // below. useMemo would shift every subsequent hook to a different slot in
   // React's internal linked list, which silently corrupts state.
-  const effectiveSystemPrompt = pageSystemPrompt?.trim()
+  const entityId = searchParams.get("id");
+  const pathSegment = pathname.split("/").filter(Boolean).pop() ?? "";
+  const detectedModel = PATH_TO_MODEL[pathSegment];
+  const baseSystemPrompt = pageSystemPrompt?.trim()
     ? pageSystemPrompt
     : GENERIC_SYSTEM_PROMPT;
+  const effectiveSystemPrompt =
+    entityId && detectedModel
+      ? `${baseSystemPrompt}\n\nIMPORTANT: The user is viewing ${detectedModel} with ID "${entityId}". ` +
+        `Use crud_get("${detectedModel}", "${entityId}") to fetch this entity directly — do NOT use crud_list.`
+      : baseSystemPrompt;
 
   // ── Models ──────────────────────────────────────────────────────────────
   const {
@@ -92,13 +110,13 @@ export function InPageChat() {
     setChatModelId,
     mode: "chat",
     initialSystemPrompt: effectiveSystemPrompt,
-    initialPath: pathname,
+    initialPath: fullPath,
     initialContext: pageContext || null,
     initialTools: "*",
   });
 
   // ── Sync live page context into the conversation ─────────────────────────
-  // pageContext / pathname are set asynchronously by the page's useEffect, so
+  // pageContext / fullPath are set asynchronously by the page's useEffect, so
   // useState(initialContext) in useConversation captures an empty string on
   // the first render.  This effect keeps the conversation params up-to-date
   // so the stored context (synced to the server) always reflects the current
@@ -106,10 +124,10 @@ export function InPageChat() {
   useEffect(() => {
     updateAiParams({
       systemPrompt: effectiveSystemPrompt,
-      path: pathname,
+      path: fullPath,
       context: pageContext || null,
     });
-  }, [pageContext, pathname, effectiveSystemPrompt, updateAiParams]);
+  }, [pageContext, fullPath, effectiveSystemPrompt, updateAiParams]);
 
   // ── Chat stream ──────────────────────────────────────────────────────────
   const {
@@ -145,7 +163,7 @@ export function InPageChat() {
     selectedModel,
     // Page-aware parameters
     systemPrompt: effectiveSystemPrompt,
-    path: pathname,
+    path: fullPath,
     context: pageContext || null,
     tools: "*",
   });
