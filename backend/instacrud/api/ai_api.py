@@ -2,7 +2,7 @@
 
 from typing import Annotated, List
 import base64
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from instacrud.api.api_utils import role_required
 from instacrud.api.rate_limiter import limiter, AI_RATE_LIMIT, get_user_identifier
@@ -628,49 +628,6 @@ async def read_mcp_resource(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to read MCP resource: {str(e)}")
-
-
-# ------------------------------
-# IMAGE PROXY ENDPOINT
-# ------------------------------
-
-@router.get("/images/proxy", tags=["ai"])
-async def proxy_image(
-    url: str,
-    _: Annotated[None, Depends(role_required(Role.RO_USER, Role.USER, Role.ORG_ADMIN, Role.ADMIN))]
-):
-    """
-    Proxy external image URLs to avoid CORS issues.
-
-    This is particularly useful for images from DALL-E and FLUX that are hosted on Azure Blob Storage
-    with CORS restrictions or SAS tokens that expire.
-
-    The proxy fetches the image from the external URL and serves it with CORS headers,
-    bypassing SAS token expiration issues.
-    """
-    try:
-        import httpx
-
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, follow_redirects=True)
-            response.raise_for_status()
-
-            # Get content type from response headers
-            content_type = response.headers.get("content-type", "image/png")
-
-            return Response(
-                content=response.content,
-                media_type=content_type,
-                headers={
-                    "Cache-Control": "public, max-age=3600",
-                    "Access-Control-Allow-Origin": "*"
-                }
-            )
-
-    except httpx.HTTPError as e:
-        raise HTTPException(status_code=502, detail=f"Failed to fetch image: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Image proxy failed: {str(e)}")
 
 
 # ------------------------------

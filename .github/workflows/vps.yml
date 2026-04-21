@@ -15,6 +15,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: vps
+    permissions: {}
 
     steps:
       - name: Deploy to VPS

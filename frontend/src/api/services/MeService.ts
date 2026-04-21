@@ -56,7 +56,9 @@ export class MeService {
     }
     /**
      * Patch Me Organization
-     * Update allowed organization fields (name, description, local_only_conversations) for ORG_ADMIN.
+     * Update allowed organization fields for ORG_ADMIN.
+     *
+     * Omitting a field leaves it unchanged. Sending description as null or "" clears it.
      * @param requestBody
      * @returns MeOrganizationResponse Successful Response
      * @throws ApiError

@@ -211,7 +211,7 @@ def _parse_filter(obj: Any, depth: int = 0):
 #  Write-payload security validation (XSS / NoSQL data-key)
 # ==========================================================
 
-_API_XSS_RE = re.compile(r'<script|javascript:|on\w+\s*=', re.IGNORECASE)
+_API_XSS_RE = re.compile(r'<script|javascript:|on(?>[a-z]+)\s*=', re.IGNORECASE)
 _API_NOSQL_OP_KEY_RE = re.compile(r'^\$')
 _API_MAX_DEPTH = 5
 

@@ -224,33 +224,6 @@ export class AiService {
         });
     }
     /**
-     * Proxy Image
-     * Proxy external image URLs to avoid CORS issues.
-     *
-     * This is particularly useful for images from DALL-E and FLUX that are hosted on Azure Blob Storage
-     * with CORS restrictions or SAS tokens that expire.
-     *
-     * The proxy fetches the image from the external URL and serves it with CORS headers,
-     * bypassing SAS token expiration issues.
-     * @param url
-     * @returns any Successful Response
-     * @throws ApiError
-     */
-    public static proxyImageImagesProxyGet(
-        url: string,
-    ): CancelablePromise<any> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/images/proxy',
-            query: {
-                'url': url,
-            },
-            errors: {
-                422: `Validation Error`,
-            },
-        });
-    }
-    /**
      * Get Usage Stats
      * Get current usage statistics for the authenticated user.
      *
