@@ -520,6 +520,24 @@ def _parse_filters_arg(filters: Any) -> dict:
 IMMUTABLE_FIELDS = {"id", "_id", "created_at", "created_by", "updated_at", "updated_by"}
 
 
+def _strip_fields(doc: dict[str, Any], fields: list[str]) -> None:
+    """Replace each excluded field with a placeholder so the AI knows it exists but was omitted."""
+    for f in fields:
+        if f not in doc:
+            continue
+        val = doc[f]
+        if isinstance(val, dict):
+            doc[f] = f"<stripped: {len(val)} entries>"
+        elif isinstance(val, list):
+            doc[f] = f"<stripped: {len(val)} items>"
+        elif isinstance(val, str):
+            doc[f] = f"<stripped: {len(val)} chars>"
+        elif val is None:
+            doc.pop(f)
+        else:
+            doc[f] = "<stripped>"
+
+
 # ── Generic CRUD ──────────────────────────────────────────────────────────────
 
 async def crud_list(
@@ -528,21 +546,25 @@ async def crud_list(
     skip: int = 0,
     limit: int = 10,
     sort: str = "-updated_at",
+    exclude_fields: Optional[list[str]] = None,
 ) -> list[dict[str, Any]]:
     _require_auth()
     _check_system_access(model_name)
     await _llm_guardrail("crud_list", {"model_name": model_name, "filters": filters, "skip": skip, "limit": limit, "sort": sort})
-    logger.info("[tool:crud_list] model={} filters={} skip={} limit={} sort={}", model_name, filters, skip, limit, sort)
+    logger.info("[tool:crud_list] model={} filters={} skip={} limit={} sort={} exclude={}", model_name, filters, skip, limit, sort, exclude_fields)
     """Return a paginated list of documents from any CRUD model.
 
     Args:
-        model_name: Python class name of the Beanie model (e.g. "Client").
-        filters:    MongoDB query filter — dict or JSON string.
-                    Supports $and, $or, $in, $eq, $ne, $gt, $gte, $lt, $lte, etc.
-                    Example: {"type": "COMPANY"} or '{"code": {"$in": ["ACME", "FOO"]}}'
-        skip:       Number of documents to skip (for pagination).
-        limit:      Maximum number of documents to return (1–500).
-        sort:       Sort expression, e.g. "-updated_at" (descending) or "name".
+        model_name:     Python class name of the Beanie model (e.g. "Client").
+        filters:        MongoDB query filter — dict or JSON string.
+                        Supports $and, $or, $in, $eq, $ne, $gt, $gte, $lt, $lte, etc.
+                        Example: {"type": "COMPANY"} or '{"code": {"$in": ["ACME", "FOO"]}}'
+        skip:           Number of documents to skip (for pagination).
+        limit:          Maximum number of documents to return (1–500).
+        sort:           Sort expression, e.g. "-updated_at" (descending) or "name".
+        exclude_fields: List of top-level field names to strip from each result to reduce
+                        response size. Useful for models that contain large arrays or
+                        blobs that would overflow the LLM context window.
 
     Returns:
         List of serialised document dicts.
@@ -552,21 +574,32 @@ async def crud_list(
     _validate_filter_values(query)
     limit = max(1, min(limit, 500))
     docs = await model.find(query).sort(sort).skip(skip).limit(limit).to_list()
-    return [_doc_to_dict(d) for d in docs]
+    results = [_doc_to_dict(d) for d in docs]
+    if exclude_fields:
+        for doc in results:
+            _strip_fields(doc, exclude_fields)
+    return results
 
 
-async def crud_get(model_name: str, item_id: str) -> dict[str, Any]:
+async def crud_get(
+    model_name: str,
+    item_id: str,
+    exclude_fields: Optional[list[str]] = None,
+) -> dict[str, Any]:
     _require_auth()
     _check_system_access(model_name)
-    logger.info("[tool:crud_get] model={} item_id={}", model_name, item_id)
+    logger.info("[tool:crud_get] model={} item_id={} exclude={}", model_name, item_id, exclude_fields)
     """Fetch a single document by its MongoDB ObjectId.
 
     Args:
-        model_name: Python class name of the Beanie model (e.g. "Project").
-        item_id:    24-hex-character ObjectId string.
+        model_name:     Python class name of the Beanie model (e.g. "Project").
+        item_id:        24-hex-character ObjectId string.
+        exclude_fields: Top-level fields to strip and replace with size hints.
+                        Use to avoid context overflows on models with large arrays or blobs.
 
     Returns:
-        Serialised document dict.
+        Serialised document dict. Stripped fields appear as "<stripped: N entries>" so
+        you know they exist and can fetch them separately if needed.
 
     Raises:
         ValueError: if the document is not found.
@@ -575,7 +608,10 @@ async def crud_get(model_name: str, item_id: str) -> dict[str, Any]:
     doc = await model.get(item_id)
     if doc is None:
         raise ValueError(f"{model_name} with id={item_id!r} not found")
-    return _doc_to_dict(doc)
+    result = _doc_to_dict(doc)
+    if exclude_fields:
+        _strip_fields(result, exclude_fields)
+    return result
 
 
 async def crud_create(model_name: str, data: dict[str, Any]) -> dict[str, Any]:
@@ -950,11 +986,22 @@ _FILTERS_PROP = {
     ),
 }
 
+_EXCLUDE_FIELDS_PROP = {
+    "type": "array",
+    "items": {"type": "string"},
+    "description": (
+        "Top-level field names to strip from results and replace with size hints "
+        "(e.g. '<stripped: 42 items>'). Use to avoid context overflows on models "
+        "that contain large arrays or blobs."
+    ),
+}
+
 CRUD_LIST_TOOL = ToolDef(
     name="crud_list",
     description=(
         "Return a paginated list of documents from any CRUD model. "
-        "Use this to query Clients, Contacts, Projects, ProjectDocuments, Addresses, or Conversations."
+        "Use this to query Clients, Contacts, Projects, ProjectDocuments, Addresses, or Conversations. "
+        "Pass exclude_fields to strip large arrays/blobs and avoid context overflow."
     ),
     input_schema={
         "type": "object",
@@ -968,6 +1015,7 @@ CRUD_LIST_TOOL = ToolDef(
                 "description": 'Sort field. Prefix with "-" for descending. Default: "-updated_at".',
                 "default": "-updated_at",
             },
+            "exclude_fields": _EXCLUDE_FIELDS_PROP,
         },
         "required": ["model_name"],
     },
@@ -976,12 +1024,16 @@ CRUD_LIST_TOOL = ToolDef(
 
 CRUD_GET_TOOL = ToolDef(
     name="crud_get",
-    description="Fetch a single document by its MongoDB ObjectId from any CRUD model.",
+    description=(
+        "Fetch a single document by its MongoDB ObjectId from any CRUD model. "
+        "Pass exclude_fields to strip large arrays/blobs and avoid context overflow."
+    ),
     input_schema={
         "type": "object",
         "properties": {
             "model_name": _MODEL_NAME_PROP,
             "item_id": _ITEM_ID_PROP,
+            "exclude_fields": _EXCLUDE_FIELDS_PROP,
         },
         "required": ["model_name", "item_id"],
     },

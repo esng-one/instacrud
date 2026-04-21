@@ -33,10 +33,20 @@ export function EntityDetailView<T extends Record<string, unknown>>({
   modelName,
   publishAiContext = true,
 }: EntityDetailViewProps<T>) {
-  // Publish current item to the in-page AI assistant
+  // Publish current item to the in-page AI assistant.
+  // Strip large arrays to avoid blowing the LLM context window — the AI can
+  // fetch them on demand via crud_get with specific fields.
   const contextJson = useMemo(() => {
     try {
-      return JSON.stringify(item, null, 2);
+      const stripped: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(item)) {
+        if (Array.isArray(v) && v.length > 10) {
+          stripped[k] = `<stripped: ${v.length} items>`;
+        } else {
+          stripped[k] = v;
+        }
+      }
+      return JSON.stringify(stripped, null, 2);
     } catch {
       return "";
     }
