@@ -2,6 +2,9 @@ meta {
   name: List Organizations
   type: http
   seq: 1
+  tags: [
+    admin
+  ]
 }
 
 get {
@@ -39,7 +42,9 @@ example {
             "name": "",
             "code": "",
             "description": "",
-            "tier_id": ""
+            "status": "",
+            "tier_id": "",
+            "local_only_conversations": false
           }
         ]
       '''

@@ -2,12 +2,23 @@ meta {
   name: Get Usage Stats
   type: http
   seq: 10
+  tags: [
+    ai
+    usage
+  ]
 }
 
 get {
   url: {{baseUrl}}/api/v1/usage/stats
   body: none
   auth: inherit
+}
+
+docs {
+  Get current usage statistics for the authenticated user.
+  
+  Returns usage for all AI service types (completions, embeddings, images, medias)
+  along with tier limits and reset time.
 }
 
 example {

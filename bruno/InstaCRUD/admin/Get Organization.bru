@@ -2,6 +2,9 @@ meta {
   name: Get Organization
   type: http
   seq: 3
+  tags: [
+    admin
+  ]
 }
 
 get {
@@ -45,7 +48,9 @@ example {
           "name": "",
           "code": "",
           "description": "",
-          "tier_id": ""
+          "status": "",
+          "tier_id": "",
+          "local_only_conversations": false
         }
       '''
     }

@@ -1,7 +1,10 @@
 meta {
   name: Create Embeddings
   type: http
-  seq: 3
+  seq: 4
+  tags: [
+    ai
+  ]
 }
 
 post {
@@ -15,6 +18,12 @@ body:json {
     "text": "",
     "model_id": ""
   }
+}
+
+docs {
+  Generate embeddings for text.
+  
+  Requires a model with `embedding=True`.
 }
 
 example {

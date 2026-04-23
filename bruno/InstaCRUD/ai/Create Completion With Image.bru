@@ -1,7 +1,10 @@
 meta {
   name: Create Completion With Image
   type: http
-  seq: 2
+  seq: 3
+  tags: [
+    ai
+  ]
 }
 
 post {
@@ -21,6 +24,13 @@ body:json {
     "stream": false,
     "reasoning": false
   }
+}
+
+docs {
+  Generate completion with image input.
+  
+  Requires a model with `image_completion=True`.
+  Provide either `image_url` or `image_data` (base64 encoded).
 }
 
 example {

@@ -2,6 +2,9 @@ meta {
   name: Get User
   type: http
   seq: 8
+  tags: [
+    admin
+  ]
 }
 
 get {
@@ -44,7 +47,7 @@ example {
           "id": "",
           "email": "",
           "name": "",
-          "role": "",
+          "role": "ADMIN",
           "organization_id": ""
         }
       '''

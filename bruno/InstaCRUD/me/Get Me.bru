@@ -1,0 +1,64 @@
+meta {
+  name: Get Me
+  type: http
+  seq: 1
+  tags: [
+    me
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me
+  body: none
+  auth: inherit
+}
+
+docs {
+  Return the full profile of the currently authenticated user.
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/me
+    method: GET
+    mode: none
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "user": {
+            "id": "",
+            "email": "",
+            "name": "",
+            "role": "",
+            "has_password": false
+          },
+          "organization": "",
+          "usage": {
+            "used": 0,
+            "limit": "",
+            "percentage": 0,
+            "remaining": "",
+            "reset_at": ""
+          },
+          "tier": ""
+        }
+      '''
+    }
+  }
+}

@@ -1,7 +1,11 @@
 meta {
   name: Read Mcp Resource
   type: http
-  seq: 8
+  seq: 9
+  tags: [
+    ai
+    mcp
+  ]
 }
 
 post {
@@ -16,6 +20,10 @@ body:json {
     "mcp_api_key": "",
     "uri": ""
   }
+}
+
+docs {
+  Read a resource from an MCP server.
 }
 
 example {

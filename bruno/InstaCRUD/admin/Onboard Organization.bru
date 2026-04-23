@@ -2,6 +2,9 @@ meta {
   name: Onboard Organization
   type: http
   seq: 2
+  tags: [
+    admin
+  ]
 }
 
 post {
@@ -15,7 +18,8 @@ body:json {
     "name": "",
     "code": "",
     "description": "",
-    "tier_id": ""
+    "tier_id": "",
+    "local_only_conversations": false
   }
 }
 
@@ -32,7 +36,8 @@ example {
         "name": "",
         "code": "",
         "description": "",
-        "tier_id": ""
+        "tier_id": "",
+        "local_only_conversations": false
       }
     }
   }
@@ -71,7 +76,8 @@ example {
         "name": "",
         "code": "",
         "description": "",
-        "tier_id": ""
+        "tier_id": "",
+        "local_only_conversations": false
       }
     }
   }

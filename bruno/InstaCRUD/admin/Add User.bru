@@ -2,6 +2,9 @@ meta {
   name: Add User
   type: http
   seq: 6
+  tags: [
+    admin
+  ]
 }
 
 post {
@@ -15,7 +18,7 @@ body:json {
     "email": "",
     "password": "",
     "name": "",
-    "role": "",
+    "role": "ADMIN",
     "organization_id": "",
     "invitation_id": ""
   }
@@ -34,7 +37,7 @@ example {
         "email": "",
         "password": "",
         "name": "",
-        "role": "",
+        "role": "ADMIN",
         "organization_id": "",
         "invitation_id": ""
       }
@@ -75,7 +78,7 @@ example {
         "email": "",
         "password": "",
         "name": "",
-        "role": "",
+        "role": "ADMIN",
         "organization_id": "",
         "invitation_id": ""
       }

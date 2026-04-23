@@ -1,0 +1,176 @@
+meta {
+  name: Create Conversation
+  type: http
+  seq: 2
+  tags: [
+    conversations
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/conversations
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "external_uuid": "",
+    "title": "",
+    "messages": [
+      {
+        "role": "user",
+        "content": "",
+        "image_data": "",
+        "image_url": "",
+        "generated_images": "",
+        "reasoning_content": "",
+        "timestamp": ""
+      }
+    ],
+    "model_id": "",
+    "last_message_at": "",
+    "system_prompt": "",
+    "path": "",
+    "context": "",
+    "tools": ""
+  }
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/conversations
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "external_uuid": "",
+        "title": "",
+        "messages": [
+          {
+            "role": "user",
+            "content": "",
+            "image_data": "",
+            "image_url": "",
+            "generated_images": "",
+            "reasoning_content": "",
+            "timestamp": ""
+          }
+        ],
+        "model_id": "",
+        "last_message_at": "",
+        "system_prompt": "",
+        "path": "",
+        "context": "",
+        "tools": ""
+      }
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "_id": "",
+          "created_at": "",
+          "created_by": "",
+          "updated_at": "",
+          "updated_by": "",
+          "user_id": "5eb7cf5a86d9755df3a6c593",
+          "external_uuid": "",
+          "title": "",
+          "messages": [
+            {
+              "role": "user",
+              "content": "",
+              "image_data": "",
+              "image_url": "",
+              "generated_images": "",
+              "reasoning_content": "",
+              "timestamp": ""
+            }
+          ],
+          "model_id": "",
+          "last_message_at": "",
+          "system_prompt": "",
+          "path": "",
+          "context": "",
+          "tools": ""
+        }
+      '''
+    }
+  }
+}
+
+example {
+  name: 422 Response
+  description: Validation Error
+  
+  request: {
+    url: {{baseUrl}}/api/v1/conversations
+    method: POST
+    mode: json
+    body:json: {
+      {
+        "external_uuid": "",
+        "title": "",
+        "messages": [
+          {
+            "role": "user",
+            "content": "",
+            "image_data": "",
+            "image_url": "",
+            "generated_images": "",
+            "reasoning_content": "",
+            "timestamp": ""
+          }
+        ],
+        "model_id": "",
+        "last_message_at": "",
+        "system_prompt": "",
+        "path": "",
+        "context": "",
+        "tools": ""
+      }
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 422
+      text: Unprocessable Entity
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "detail": [
+            {
+              "loc": [],
+              "msg": "",
+              "type": ""
+            }
+          ]
+        }
+      '''
+    }
+  }
+}

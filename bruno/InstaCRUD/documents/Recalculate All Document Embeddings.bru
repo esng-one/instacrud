@@ -2,12 +2,26 @@ meta {
   name: Recalculate All Document Embeddings
   type: http
   seq: 8
+  tags: [
+    documents
+  ]
 }
 
 post {
   url: {{baseUrl}}/api/v1/documents/recalculate-embeddings-all
   body: none
   auth: inherit
+}
+
+docs {
+  Force recalculate embeddings for all documents that have content.
+  
+  This is useful for:
+  - Initial setup of embeddings on existing documents
+  - Switching to a new embedding model
+  - Fixing documents with missing embeddings
+  
+  Returns statistics about the operation.
 }
 
 example {

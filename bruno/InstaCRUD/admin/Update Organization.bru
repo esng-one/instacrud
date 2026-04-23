@@ -2,6 +2,9 @@ meta {
   name: Update Organization
   type: http
   seq: 4
+  tags: [
+    admin
+  ]
 }
 
 patch {
@@ -18,7 +21,8 @@ body:json {
   {
     "name": "",
     "description": "",
-    "tier_id": ""
+    "tier_id": "",
+    "local_only_conversations": ""
   }
 }
 
@@ -38,7 +42,8 @@ example {
       {
         "name": "",
         "description": "",
-        "tier_id": ""
+        "tier_id": "",
+        "local_only_conversations": ""
       }
     }
   }
@@ -61,7 +66,9 @@ example {
           "name": "",
           "code": "",
           "description": "",
-          "tier_id": ""
+          "status": "",
+          "tier_id": "",
+          "local_only_conversations": false
         }
       '''
     }
@@ -84,7 +91,8 @@ example {
       {
         "name": "",
         "description": "",
-        "tier_id": ""
+        "tier_id": "",
+        "local_only_conversations": ""
       }
     }
   }

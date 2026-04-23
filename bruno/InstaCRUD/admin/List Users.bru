@@ -2,6 +2,9 @@ meta {
   name: List Users
   type: http
   seq: 7
+  tags: [
+    admin
+  ]
 }
 
 get {
@@ -11,9 +14,9 @@ get {
 }
 
 params:query {
+  skip: 0
+  limit: 10
   ~organization_id: 
-  ~skip: 
-  ~limit: 
 }
 
 example {
@@ -26,8 +29,8 @@ example {
     mode: none
     params:query: {
       ~organization_id: 
-      ~skip: 
-      ~limit: 
+      skip: 0
+      limit: 10
     }
   }
   
@@ -49,7 +52,7 @@ example {
             "id": "",
             "email": "",
             "name": "",
-            "role": "",
+            "role": "ADMIN",
             "organization_id": ""
           }
         ]
@@ -68,8 +71,8 @@ example {
     mode: none
     params:query: {
       ~organization_id: 
-      ~skip: 
-      ~limit: 
+      skip: 0
+      limit: 10
     }
   }
   

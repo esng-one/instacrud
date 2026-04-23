@@ -2,6 +2,10 @@ meta {
   name: Get Item
   type: http
   seq: 16
+  tags: [
+    admin
+    ai-models
+  ]
 }
 
 get {
@@ -46,7 +50,7 @@ example {
           "created_by": "",
           "updated_at": "",
           "updated_by": "",
-          "service": "",
+          "service": "OPEN_AI",
           "name": "",
           "model_identifier": "",
           "temperature": "",
@@ -62,7 +66,8 @@ example {
           "enabled": false,
           "rank": "",
           "params": "",
-          "tier": ""
+          "tier": "",
+          "icon": ""
         }
       '''
     }

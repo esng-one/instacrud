@@ -2,6 +2,9 @@ meta {
   name: Invite User
   type: http
   seq: 11
+  tags: [
+    admin
+  ]
 }
 
 post {
@@ -17,7 +20,7 @@ headers {
 body:json {
   {
     "email": "",
-    "role": "",
+    "role": "ADMIN",
     "organization_id": "",
     "expires_in_seconds": 0
   }
@@ -38,7 +41,7 @@ example {
     body:json: {
       {
         "email": "",
-        "role": "",
+        "role": "ADMIN",
         "organization_id": "",
         "expires_in_seconds": 0
       }
@@ -82,7 +85,7 @@ example {
     body:json: {
       {
         "email": "",
-        "role": "",
+        "role": "ADMIN",
         "organization_id": "",
         "expires_in_seconds": 0
       }

@@ -1,7 +1,10 @@
 meta {
   name: Generate Images
   type: http
-  seq: 4
+  seq: 5
+  tags: [
+    ai
+  ]
 }
 
 post {
@@ -17,9 +20,16 @@ body:json {
     "size": "",
     "quality": "",
     "n": 0,
-    "response_format": "",
+    "response_format": "url",
     "image_data": ""
   }
+}
+
+docs {
+  Generate images from text prompt.
+  
+  Requires a model with `image_generation=True`.
+  Optionally accepts a reference image for image-to-image generation (if model supports vision).
 }
 
 example {
@@ -37,7 +47,7 @@ example {
         "size": "",
         "quality": "",
         "n": 0,
-        "response_format": "",
+        "response_format": "url",
         "image_data": ""
       }
     }
@@ -81,7 +91,7 @@ example {
         "size": "",
         "quality": "",
         "n": 0,
-        "response_format": "",
+        "response_format": "url",
         "image_data": ""
       }
     }
