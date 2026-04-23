@@ -1,11 +1,13 @@
 import json
 import re
+from datetime import datetime, timezone
 from typing import Type, TypeVar, List, Optional, Any
 from bson import ObjectId
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
 from beanie import Document, PydanticObjectId
+from pydantic import ValidationError
 from pymongo.errors import DuplicateKeyError
 
 from instacrud.api.validators import handle_duplicate_key, ensure_exists
@@ -350,17 +352,26 @@ def create_crud_router(
         if userScoped and "user_id" in data:
             del data["user_id"]
 
-        for field, value in data.items():
-            if field not in IMMUTABLE_FIELDS:
-                setattr(item_obj, field, value)
+        update_data = {k: v for k, v in data.items() if k not in IMMUTABLE_FIELDS}
+
+        # Validate nested models (e.g. List[SomeSubDoc]) before touching DB —
+        # update($set) bypasses Pydantic assignment validation entirely.
+        try:
+            model.model_validate({**json.loads(item_obj.model_dump_json()), **update_data})
+        except ValidationError as e:
+            raise HTTPException(status_code=422, detail=e.errors())
+
+        # Stamp audit fields — before_event(Save) does not fire for update($set).
+        update_data["updated_at"] = datetime.now(tz=timezone.utc)
+        user_ctx = current_user_context.get()
+        if user_ctx and user_ctx.email:
+            update_data["updated_by"] = user_ctx.email
 
         try:
-            from beanie.odm.operators.update.general import Set
-            safe_data = {k: v for k, v in data.items() if k not in IMMUTABLE_FIELDS}
-            await model.find_one({"_id": item_obj.id}).update(Set(safe_data))
+            await item_obj.update({"$set": update_data})
 
             # DEMO: Invalidate FAISS if content changed on embedding-enabled model
-            if "content" in safe_data and hasattr(model, "content_embedding"):
+            if "content" in update_data and hasattr(model, "content_embedding"):
                 from instacrud.ai.vector_search import invalidate_vector_search
                 invalidate_vector_search()
 
@@ -391,17 +402,29 @@ def create_crud_router(
         if userScoped and "user_id" in data:
             del data["user_id"]
 
-        for field, value in data.items():
-            if field not in IMMUTABLE_FIELDS and hasattr(item_obj, field):
-                setattr(item_obj, field, value)
+        update_data = {
+            k: v for k, v in data.items()
+            if k not in IMMUTABLE_FIELDS and hasattr(item_obj, k)
+        }
+
+        # Validate nested models (e.g. List[SomeSubDoc]) before touching DB —
+        # update($set) bypasses Pydantic assignment validation entirely.
+        try:
+            model.model_validate({**json.loads(item_obj.model_dump_json()), **update_data})
+        except ValidationError as e:
+            raise HTTPException(status_code=422, detail=e.errors())
+
+        # Stamp audit fields — before_event(Save) does not fire for update($set).
+        update_data["updated_at"] = datetime.now(tz=timezone.utc)
+        user_ctx = current_user_context.get()
+        if user_ctx and user_ctx.email:
+            update_data["updated_by"] = user_ctx.email
 
         try:
-            from beanie.odm.operators.update.general import Set
-            safe_data = {k: v for k, v in data.items() if k not in IMMUTABLE_FIELDS}
-            await model.find_one({"_id": item_obj.id}).update(Set(safe_data))
+            await item_obj.update({"$set": update_data})
 
             # DEMO: Invalidate FAISS if content changed on embedding-enabled model
-            if "content" in safe_data and hasattr(model, "content_embedding"):
+            if "content" in update_data and hasattr(model, "content_embedding"):
                 from instacrud.ai.vector_search import invalidate_vector_search
                 invalidate_vector_search()
 
