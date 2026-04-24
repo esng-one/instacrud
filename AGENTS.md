@@ -9,7 +9,7 @@ AI-enabled CRUD starter with a **Next.js 15** frontend and **FastAPI** backend, 
 ## Stack
 
 - **Frontend:** Next.js 15, TypeScript, Tailwind CSS — lives in `frontend/`
-- **Backend:** FastAPI, Python 3.10+, Beanie ODM — lives in `backend/`
+- **Backend:** FastAPI, Python 3.13+, Beanie ODM — lives in `backend/`
 - **DB:** MongoDB
 - **Auth:** JWT + optional OAuth (Authlib)
 - **AI:** LangChain with OpenAI / Anthropic integrations
