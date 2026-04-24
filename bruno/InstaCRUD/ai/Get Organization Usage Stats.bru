@@ -2,10 +2,6 @@ meta {
   name: Get Organization Usage Stats
   type: http
   seq: 11
-  tags: [
-    ai
-    usage
-  ]
 }
 
 get {
@@ -16,13 +12,6 @@ get {
 
 params:path {
   organization_id: 
-}
-
-docs {
-  Get usage statistics for an organization.
-  
-  ADMIN can query any organization by ID.
-  ORG_ADMIN gets their own organization's stats (organization_id parameter is ignored).
 }
 
 example {

@@ -2,10 +2,6 @@ meta {
   name: Get Bulk Organization Usage Stats
   type: http
   seq: 12
-  tags: [
-    ai
-    usage
-  ]
 }
 
 post {
@@ -20,11 +16,6 @@ body:json {
   ]
 }
 
-docs {
-  Get usage values for multiple organizations (admin only).
-  Returns a map of organization_id -> usage (number, 0 if none).
-}
-
 example {
   name: 200 Response
   description: Successful Response
@@ -35,7 +26,7 @@ example {
     mode: json
     body:json: {
       [
-        {}
+        ""
       ]
     }
   }
@@ -69,7 +60,7 @@ example {
     mode: json
     body:json: {
       [
-        {}
+        ""
       ]
     }
   }

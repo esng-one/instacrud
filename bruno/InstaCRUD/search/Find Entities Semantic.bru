@@ -2,9 +2,6 @@ meta {
   name: Find Entities Semantic
   type: http
   seq: 2
-  tags: [
-    search
-  ]
 }
 
 get {
@@ -15,16 +12,6 @@ get {
 
 params:query {
   q: 
-}
-
-docs {
-  Semantic search using vector embeddings.
-  
-  Searches through documents with embeddings using vector similarity.
-  Returns results ranked by semantic relevance to the query.
-  
-  Note: Uses MongoDB Atlas $vectorSearch when available, falls back to
-  in-memory FAISS for local development.
 }
 
 example {

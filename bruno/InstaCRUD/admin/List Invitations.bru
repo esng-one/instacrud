@@ -2,9 +2,6 @@ meta {
   name: List Invitations
   type: http
   seq: 12
-  tags: [
-    admin
-  ]
 }
 
 get {
@@ -14,9 +11,9 @@ get {
 }
 
 params:query {
-  skip: 0
-  limit: 10
   ~organization_id: 
+  ~skip: 
+  ~limit: 
 }
 
 example {
@@ -29,8 +26,8 @@ example {
     mode: none
     params:query: {
       ~organization_id: 
-      skip: 0
-      limit: 10
+      ~skip: 
+      ~limit: 
     }
   }
   
@@ -54,7 +51,7 @@ example {
             "invited_by": "",
             "invited_at": "",
             "expires_at": "",
-            "role": "ADMIN",
+            "role": "",
             "accepted": false
           }
         ]
@@ -73,8 +70,8 @@ example {
     mode: none
     params:query: {
       ~organization_id: 
-      skip: 0
-      limit: 10
+      ~skip: 
+      ~limit: 
     }
   }
   

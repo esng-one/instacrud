@@ -2,10 +2,6 @@ meta {
   name: List Items
   type: http
   seq: 15
-  tags: [
-    admin
-    ai-models
-  ]
 }
 
 get {
@@ -15,16 +11,9 @@ get {
 }
 
 params:query {
-  skip: 0
-  limit: 10
+  ~skip: 
+  ~limit: 
   ~filters: 
-}
-
-docs {
-  Returns a paginated list of documents.
-  Supports:
-    - $in, $and, $or filters
-    - Automatic ObjectId coercion for *_id / *_ids fields
 }
 
 example {
@@ -36,8 +25,8 @@ example {
     method: GET
     mode: none
     params:query: {
-      skip: 0
-      limit: 10
+      ~skip: 
+      ~limit: 
       ~filters: 
     }
   }
@@ -62,7 +51,7 @@ example {
             "created_by": "",
             "updated_at": "",
             "updated_by": "",
-            "service": "OPEN_AI",
+            "service": "",
             "name": "",
             "model_identifier": "",
             "temperature": "",
@@ -78,8 +67,7 @@ example {
             "enabled": false,
             "rank": "",
             "params": "",
-            "tier": "",
-            "icon": ""
+            "tier": ""
           }
         ]
       '''
@@ -96,8 +84,8 @@ example {
     method: GET
     mode: none
     params:query: {
-      skip: 0
-      limit: 10
+      ~skip: 
+      ~limit: 
       ~filters: 
     }
   }

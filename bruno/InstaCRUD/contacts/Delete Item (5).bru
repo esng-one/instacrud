@@ -1,0 +1,83 @@
+meta {
+  name: Delete Item (5)
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/contacts/:item_id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  item_id: 
+}
+
+example {
+  name: 204 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/contacts/:item_id
+    method: DELETE
+    mode: none
+    params:path: {
+      item_id: 
+    }
+  }
+  
+  response: {
+    status: {
+      code: 204
+      text: No Content
+    }
+  
+    body: {
+      type: text
+      content: '''
+  
+      '''
+    }
+  }
+}
+
+example {
+  name: 422 Response
+  description: Validation Error
+  
+  request: {
+    url: {{baseUrl}}/api/v1/contacts/:item_id
+    method: DELETE
+    mode: none
+    params:path: {
+      item_id: 
+    }
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 422
+      text: Unprocessable Entity
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "detail": [
+            {
+              "loc": [],
+              "msg": "",
+              "type": ""
+            }
+          ]
+        }
+      '''
+    }
+  }
+}

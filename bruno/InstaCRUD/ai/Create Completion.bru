@@ -2,9 +2,6 @@ meta {
   name: Create Completion
   type: http
   seq: 1
-  tags: [
-    ai
-  ]
 }
 
 post {
@@ -20,12 +17,6 @@ body:json {
     "stream": false,
     "reasoning": false
   }
-}
-
-docs {
-  Generate text completion.
-  
-  Requires a model with `completion=True`.
 }
 
 example {

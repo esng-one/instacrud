@@ -2,10 +2,6 @@ meta {
   name: List Items (GET)
   type: http
   seq: 21
-  tags: [
-    admin
-    tiers
-  ]
 }
 
 get {
@@ -15,16 +11,9 @@ get {
 }
 
 params:query {
-  skip: 0
-  limit: 10
+  ~skip: 
+  ~limit: 
   ~filters: 
-}
-
-docs {
-  Returns a paginated list of documents.
-  Supports:
-    - $in, $and, $or filters
-    - Automatic ObjectId coercion for *_id / *_ids fields
 }
 
 example {
@@ -36,8 +25,8 @@ example {
     method: GET
     mode: none
     params:query: {
-      skip: 0
-      limit: 10
+      ~skip: 
+      ~limit: 
       ~filters: 
     }
   }
@@ -85,8 +74,8 @@ example {
     method: GET
     mode: none
     params:query: {
-      skip: 0
-      limit: 10
+      ~skip: 
+      ~limit: 
       ~filters: 
     }
   }

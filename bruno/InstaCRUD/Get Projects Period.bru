@@ -1,7 +1,7 @@
 meta {
   name: Get Projects Period
   type: http
-  seq: 1
+  seq: 2
 }
 
 get {
@@ -13,8 +13,8 @@ get {
 params:query {
   start: 
   end: 
-  skip: 0
-  limit: 10
+  ~skip: 
+  ~limit: 
 }
 
 example {
@@ -28,8 +28,8 @@ example {
     params:query: {
       start: 
       end: 
-      skip: 0
-      limit: 10
+      ~skip: 
+      ~limit: 
     }
   }
   
@@ -78,8 +78,8 @@ example {
     params:query: {
       start: 
       end: 
-      skip: 0
-      limit: 10
+      ~skip: 
+      ~limit: 
     }
   }
   

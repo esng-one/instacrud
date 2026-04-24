@@ -2,9 +2,6 @@ meta {
   name: Recalculate Document Embedding
   type: http
   seq: 7
-  tags: [
-    documents
-  ]
 }
 
 post {
@@ -15,15 +12,6 @@ post {
 
 params:path {
   document_id: 
-}
-
-docs {
-  Force recalculate the content embedding for a specific document.
-  
-  This endpoint:
-  - Retrieves the document by ID
-  - Recalculates the embedding from the content field
-  - Saves the updated embedding to the database
 }
 
 example {

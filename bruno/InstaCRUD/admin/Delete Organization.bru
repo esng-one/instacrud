@@ -2,9 +2,6 @@ meta {
   name: Delete Organization
   type: http
   seq: 5
-  tags: [
-    admin
-  ]
 }
 
 delete {
@@ -14,7 +11,7 @@ delete {
 }
 
 params:query {
-  confirm_hash: 
+  ~confirm_hash: 
 }
 
 params:path {
@@ -30,7 +27,7 @@ example {
     method: DELETE
     mode: none
     params:query: {
-      confirm_hash: 
+      ~confirm_hash: 
     }
   
     params:path: {
@@ -66,7 +63,7 @@ example {
     method: DELETE
     mode: none
     params:query: {
-      confirm_hash: 
+      ~confirm_hash: 
     }
   
     params:path: {
