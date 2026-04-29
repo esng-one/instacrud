@@ -126,9 +126,11 @@ class DatabaseManager:
         Returns True if healthy, False if broken.
         """
         try:
-            client = self._clients.get(db_id, _client_instance)
+            db = self._databases.get(db_id)
+            if db is None:
+                return False
             await asyncio.wait_for(
-                client.admin.command('ping'),
+                db.command('ping'),
                 timeout=self.HEALTH_CHECK_TIMEOUT_SECONDS
             )
             return True
@@ -194,11 +196,12 @@ class DatabaseManager:
             else:
                 db = _client_instance.get_database(db_id)
 
-            # Test connectivity
+            # Test connectivity — ping the org database, not admin, because
+            # Firestore MongoDB user credentials are scoped to a single database
+            # and cannot authenticate against admin.
             try:
-                test_client = self._clients.get(db_id, _client_instance)
                 await asyncio.wait_for(
-                    test_client.admin.command('ping'),
+                    db.command('ping'),
                     timeout=self.HEALTH_CHECK_TIMEOUT_SECONDS
                 )
             except Exception as e:
