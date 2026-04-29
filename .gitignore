@@ -32,3 +32,10 @@ volumes/
 
 # Frontend test results
 frontend/test-results/
+
+# Terraform
+infrastructure/terraform.tfvars
+infrastructure/*.tfstate
+infrastructure/*.tfstate.backup
+infrastructure/.terraform/
+infrastructure/.terraform.lock.hcl

@@ -1,0 +1,71 @@
+# Copy this file to terraform.tfvars and fill in your values.
+# Never commit terraform.tfvars — it contains secrets.
+
+# ---------------------------------------------------------------------------
+# GCP project
+# ---------------------------------------------------------------------------
+
+project_id = "YOUR_PROJECT_ID"
+region     = "us-central1"
+
+# ---------------------------------------------------------------------------
+# Required secrets
+# ---------------------------------------------------------------------------
+
+secret_key = "a-long-random-string-for-jwt-signing"
+
+# Separate encryption key for org database connection URLs.
+# Generate with: python -c "import secrets; print(secrets.token_urlsafe(64))"
+mongo_url_secret_key = ""
+
+# ---------------------------------------------------------------------------
+# Google OAuth (from GCP Console → APIs & Services → Credentials)
+# ---------------------------------------------------------------------------
+
+google_client_id     = ""   # plain env var (not a secret)
+google_client_secret = ""
+
+# ---------------------------------------------------------------------------
+# Microsoft OAuth (from Azure Portal → App registrations)
+# ---------------------------------------------------------------------------
+
+ms_client_id     = ""   # plain env var (not a secret)
+ms_client_secret = ""
+ms_tenant_id     = "common"   # or your Azure tenant ID for single-tenant apps
+
+# ---------------------------------------------------------------------------
+# Cloudflare Turnstile (from dash.cloudflare.com → Turnstile)
+# ---------------------------------------------------------------------------
+
+turnstile_site_key   = ""      # public key, shown in the browser widget
+turnstile_secret_key = ""      # server-side verification key
+turnstile_mode       = "normal"   # "normal" | "invisible"
+
+# ---------------------------------------------------------------------------
+# AI API keys (leave empty to disable the corresponding provider)
+# ---------------------------------------------------------------------------
+
+openai_api_key    = ""
+anthropic_api_key = ""
+deepinfra_api_key = ""
+
+# AI tool-abuse guardrail: set to an OpenAI model (e.g. "gpt-4o-mini") to enable,
+# or leave empty to disable the second-layer abuse check.
+tools_guardrail_model = ""
+
+# ---------------------------------------------------------------------------
+# Email
+# ---------------------------------------------------------------------------
+
+email_enabled      = "false"
+email_carrier      = "brevo"           # "file" | "brevo" | "smtp" | "gmail"
+email_from_address = "noreply@yourdomain.com"
+email_from_name    = "InstaCRUD"
+
+brevo_api_key = ""
+
+# ---------------------------------------------------------------------------
+# Registration
+# ---------------------------------------------------------------------------
+
+open_registration = "false"   # set to "true" to allow public self-registration

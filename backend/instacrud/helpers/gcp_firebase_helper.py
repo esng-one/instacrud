@@ -1,4 +1,6 @@
 import json
+import time
+from google.api_core import exceptions as gcp_exceptions
 from google.cloud import firestore_admin_v1, firestore
 from google.cloud.firestore_admin_v1 import types as firestore_admin_types
 from google.oauth2 import service_account
@@ -75,6 +77,10 @@ def gcp_firestore_create_database(database_id: str, credentials=None) -> dict:
         concurrency_mode=firestore_admin_types.Database.ConcurrencyMode.PESSIMISTIC,
         database_edition=firestore_admin_types.Database.DatabaseEdition.ENTERPRISE,
     )
+    # mongodb_compatible_data_access_mode is not surfaced by the proto-plus wrapper
+    # in this SDK version, so set it on the underlying raw protobuf message directly.
+    # DATA_ACCESS_MODE_ENABLED = 1
+    database._pb.mongodb_compatible_data_access_mode = 1
 
     try:
         operation = client.create_database(
@@ -175,8 +181,22 @@ def gcp_firestore_create_user_creds(database_id: str, username: str, credentials
         user_creds=firestore_admin_types.UserCreds(),
         user_creds_id=username,
     )
-    response = client.create_user_creds(request)
-    return response.secure_password, response.resource_identity.principal
+
+    # Retry on ABORTED: the MongoDB endpoint takes a few seconds to become ready
+    # after a fresh database creation, and returns ABORTED in the meantime.
+    delays = [5, 10, 20, 30, 60]
+    for attempt, delay in enumerate(delays, start=1):
+        try:
+            response = client.create_user_creds(request)
+            return response.secure_password, response.resource_identity.principal
+        except gcp_exceptions.Aborted as e:
+            if attempt == len(delays):
+                raise
+            logger.warning(
+                f"create_user_creds ABORTED (attempt {attempt}/{len(delays)}), "
+                f"retrying in {delay}s: {e}"
+            )
+            time.sleep(delay)
 
 
 def gcp_firestore_grant_db_role(principal: str, database_id: str, credentials=None) -> None:
