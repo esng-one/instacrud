@@ -91,7 +91,7 @@ export function EntityGrid<T extends Record<string, unknown>>({
           <a
             onClick={(e) => { e.preventDefault(); onRowClick(params.id as string); }}
             href="#"
-            className="text-blue-600 underline cursor-pointer"
+            className="text-brand-500 dark:text-brand-400 underline cursor-pointer"
           >
             {params.value as string}
           </a>
