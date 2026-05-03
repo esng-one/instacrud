@@ -1,13 +1,15 @@
 // components/auth/ProvisioningGuard.tsx
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import useAuth from "@/hooks/useAuth";
 import { useMeContext } from "@/context/MeContext";
 import { MeService } from "@/api/services/MeService";
 import type { MeResponse } from "@/api/models/MeResponse";
 import AuthLoader from "@/components/auth/AuthLoader";
 import { getApiErrorInfo } from "@/app/lib/api-error";
+import { logout as performLogout } from "@/app/lib/util";
 
 const PROVISIONING_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 const POLL_INTERVAL = 5000;
@@ -49,7 +51,7 @@ function resolveProvisioningStatus(me: MeResponse): "ready" | "provisioning" | "
 
 export default function ProvisioningGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoadingAuth } = useAuth();
-  const { me, isLoading: meLoading } = useMeContext();
+  const { me, isLoading: meLoading, authFailed } = useMeContext();
 
   // Keep me in a ref so the effect can read the latest value without re-running
   // when MeContext does a background stale-while-revalidate (~60s TTL). Without this,
@@ -57,22 +59,56 @@ export default function ProvisioningGuard({ children }: { children: React.ReactN
   const meRef = useRef(me);
   useEffect(() => { meRef.current = me; }, [me]);
 
+  // Keep authFailed in a ref for the same reason — readable inside async callbacks
+  // of the main effect without adding it to that effect's dependency array.
+  const authFailedRef = useRef(authFailed);
+  useEffect(() => { authFailedRef.current = authFailed; }, [authFailed]);
+
   const [status, setStatus] = useState<"loading" | "provisioning" | "failed" | "ready">("loading");
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const logout = () => {
-    try {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user.info");
-      localStorage.removeItem(ORG_STATUS_CACHE_KEY);
-    } catch {}
-    window.location.href = "/signin";
-  };
+  const router = useRouter();
+  // Prevents duplicate logout calls from concurrent effects or polling callbacks.
+  const logoutCalledRef = useRef(false);
+
+  // Delegates to the shared logout utility for canonical token/cache cleanup and
+  // router-based navigation (avoids duplicating that logic here).
+  // ORG_STATUS_CACHE_KEY is provisioning-specific so it is cleared before delegating.
+  // router.push (inside performLogout) is preferred over window.location.href to
+  // avoid a full page reload; a hard reload is not needed since all auth state is
+  // cleared synchronously before navigation.
+  const signOut = useCallback((reason?: { message: string; action: string }) => {
+    if (logoutCalledRef.current) return;
+    logoutCalledRef.current = true;
+    try { localStorage.removeItem(ORG_STATUS_CACHE_KEY); } catch {}
+    performLogout(router, reason);
+  }, [router]);
+
+  // Keep signOut in a ref so poll() and initialCheck() — which close over the main
+  // effect's scope — can always call the latest version without being deps of that effect.
+  const signOutRef = useRef(signOut);
+  useEffect(() => { signOutRef.current = signOut; }, [signOut]);
+
+  // React immediately to a server-side 401 surfaced by MeContext.
+  // Client-side JWT validity ≠ server-side auth validity: the token may be
+  // cryptographically intact but rejected (user missing, DB switched, etc.).
+  // A 401 from /me is a terminal auth failure — not a transient provisioning
+  // delay — so we must logout rather than enter the provisioning retry loop.
+  useEffect(() => {
+    if (authFailed) {
+      setStatus("loading");
+      signOut({ message: "Your session has expired", action: "Please sign in again" });
+    }
+  }, [authFailed, signOut]);
 
   useEffect(() => {
     if (!isAuthenticated || isLoadingAuth || meLoading) return;
+    // If MeContext already signalled a server-side auth failure, the effect above
+    // handles logout. Skip the provisioning flow entirely to avoid a redundant
+    // /me call and to prevent starting a polling loop that would always hit 401.
+    if (authFailed || logoutCalledRef.current) return;
 
     let cancelled = false;
 
@@ -93,7 +129,12 @@ export default function ProvisioningGuard({ children }: { children: React.ReactN
       } catch (err) {
         if (cancelled) return;
         const { status: httpStatus } = getApiErrorInfo(err);
-        if (httpStatus === 403 || httpStatus === 404 || httpStatus === 501) {
+        if (httpStatus === 401) {
+          // Token rejected mid-session (revoked, user deleted, etc.).
+          // 401 is terminal — polling will never succeed. Logout immediately.
+          stopPolling();
+          signOutRef.current({ message: "Your session has expired", action: "Please sign in again" });
+        } else if (httpStatus === 403 || httpStatus === 404 || httpStatus === 501) {
           setStatus("failed");
           stopPolling();
         }
@@ -115,12 +156,19 @@ export default function ProvisioningGuard({ children }: { children: React.ReactN
       // MeContext sets me=null on any fetch error. Fall back to a direct call so that
       // transient network errors don't permanently show "Provisioning Failed".
       if (meData === null) {
+        // If MeContext already flagged a 401, avoid a redundant round-trip —
+        // the authFailed effect is already handling logout.
+        if (authFailedRef.current) return;
         try {
           meData = await MeService.getMeMeGet();
         } catch (err) {
           if (cancelled) return;
           const { status: httpStatus } = getApiErrorInfo(err);
-          if (httpStatus === 403 || httpStatus === 404 || httpStatus === 501) {
+          if (httpStatus === 401) {
+            // Server rejected the token — auth failure, not a provisioning delay.
+            // Must not poll: every subsequent request will also return 401.
+            signOutRef.current({ message: "Your session has expired", action: "Please sign in again" });
+          } else if (httpStatus === 403 || httpStatus === 404 || httpStatus === 501) {
             setStatus("failed");
           } else {
             // Transient error: start polling so the 5-minute timeout eventually shows the
@@ -147,7 +195,9 @@ export default function ProvisioningGuard({ children }: { children: React.ReactN
       cancelled = true;
       stopPolling();
     };
-  }, [isAuthenticated, isLoadingAuth, meLoading]); // me intentionally excluded — read via meRef
+  // me intentionally excluded — read via meRef to avoid restarting the 5-min timeout
+  // on background stale-while-revalidate refreshes. signOut read via signOutRef.
+  }, [isAuthenticated, isLoadingAuth, meLoading, authFailed]);
 
   if (isLoadingAuth || meLoading || status === "loading") {
     return <AuthLoader />;
@@ -165,7 +215,7 @@ export default function ProvisioningGuard({ children }: { children: React.ReactN
         </p>
 
         <button
-          onClick={logout}
+          onClick={() => signOut()}
           className="mt-6 px-4 py-2 text-sm font-medium text-white bg-gray-600 rounded-md hover:bg-gray-700"
         >
           Sign out
@@ -202,7 +252,7 @@ export default function ProvisioningGuard({ children }: { children: React.ReactN
           </button>
 
           <button
-            onClick={logout}
+            onClick={() => signOut()}
             className="px-4 py-2 text-white bg-gray-600 rounded-md hover:bg-gray-700"
           >
             Sign out
