@@ -1,0 +1,50 @@
+meta {
+  name: Get User Settings
+  type: http
+  seq: 8
+  tags: [
+    system
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/user-settings
+  body: none
+  auth: inherit
+}
+
+docs {
+  Get current user's sync settings with effective values.
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/user-settings
+    method: GET
+    mode: none
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "local_only_conversations": false,
+          "user_local_only_conversations": ""
+        }
+      '''
+    }
+  }
+}

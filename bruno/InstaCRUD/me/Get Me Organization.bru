@@ -1,0 +1,54 @@
+meta {
+  name: Get Me Organization
+  type: http
+  seq: 3
+  tags: [
+    me
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/me/organization
+  body: none
+  auth: inherit
+}
+
+docs {
+  Return the organization of the currently authenticated ORG_ADMIN user.
+}
+
+example {
+  name: 200 Response
+  description: Successful Response
+  
+  request: {
+    url: {{baseUrl}}/api/v1/me/organization
+    method: GET
+    mode: none
+  }
+  
+  response: {
+    headers: {
+      Content-Type: application/json
+    }
+  
+    status: {
+      code: 200
+      text: OK
+    }
+  
+    body: {
+      type: json
+      content: '''
+        {
+          "id": "",
+          "name": "",
+          "code": "",
+          "description": "",
+          "local_only_conversations": false,
+          "tier_id": ""
+        }
+      '''
+    }
+  }
+}

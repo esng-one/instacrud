@@ -1,26 +1,30 @@
 meta {
-  name: Update Organization
+  name: Patch Me Organization
   type: http
   seq: 4
+  tags: [
+    me
+  ]
 }
 
 patch {
-  url: {{baseUrl}}/api/v1/admin/organizations/:organization_id
+  url: {{baseUrl}}/api/v1/me/organization
   body: json
   auth: inherit
-}
-
-params:path {
-  organization_id: 
 }
 
 body:json {
   {
     "name": "",
     "description": "",
-    "tier_id": "",
     "local_only_conversations": ""
   }
+}
+
+docs {
+  Update allowed organization fields for ORG_ADMIN.
+  
+  Omitting a field leaves it unchanged. Sending description as null or "" clears it.
 }
 
 example {
@@ -28,18 +32,14 @@ example {
   description: Successful Response
   
   request: {
-    url: {{baseUrl}}/api/v1/admin/organizations/:organization_id
+    url: {{baseUrl}}/api/v1/me/organization
     method: PATCH
     mode: json
-    params:path: {
-      organization_id: 
-    }
-  
     body:json: {
       {
         "name": "",
         "description": "",
-        "tier_id": ""
+        "local_only_conversations": ""
       }
     }
   }
@@ -62,6 +62,7 @@ example {
           "name": "",
           "code": "",
           "description": "",
+          "local_only_conversations": false,
           "tier_id": ""
         }
       '''
@@ -74,18 +75,14 @@ example {
   description: Validation Error
   
   request: {
-    url: {{baseUrl}}/api/v1/admin/organizations/:organization_id
+    url: {{baseUrl}}/api/v1/me/organization
     method: PATCH
     mode: json
-    params:path: {
-      organization_id: 
-    }
-  
     body:json: {
       {
         "name": "",
         "description": "",
-        "tier_id": ""
+        "local_only_conversations": ""
       }
     }
   }

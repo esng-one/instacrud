@@ -1,26 +1,26 @@
 meta {
-  name: Update Organization
+  name: Patch Me
   type: http
-  seq: 4
+  seq: 2
+  tags: [
+    me
+  ]
 }
 
 patch {
-  url: {{baseUrl}}/api/v1/admin/organizations/:organization_id
+  url: {{baseUrl}}/api/v1/me
   body: json
   auth: inherit
 }
 
-params:path {
-  organization_id: 
-}
-
 body:json {
   {
-    "name": "",
-    "description": "",
-    "tier_id": "",
-    "local_only_conversations": ""
+    "name": ""
   }
+}
+
+docs {
+  Update the currently authenticated user.
 }
 
 example {
@@ -28,18 +28,12 @@ example {
   description: Successful Response
   
   request: {
-    url: {{baseUrl}}/api/v1/admin/organizations/:organization_id
+    url: {{baseUrl}}/api/v1/me
     method: PATCH
     mode: json
-    params:path: {
-      organization_id: 
-    }
-  
     body:json: {
       {
-        "name": "",
-        "description": "",
-        "tier_id": ""
+        "name": ""
       }
     }
   }
@@ -58,11 +52,22 @@ example {
       type: json
       content: '''
         {
-          "id": "",
-          "name": "",
-          "code": "",
-          "description": "",
-          "tier_id": ""
+          "user": {
+            "id": "",
+            "email": "",
+            "name": "",
+            "role": "",
+            "has_password": false
+          },
+          "organization": "",
+          "usage": {
+            "used": 0,
+            "limit": "",
+            "percentage": 0,
+            "remaining": "",
+            "reset_at": ""
+          },
+          "tier": ""
         }
       '''
     }
@@ -74,18 +79,12 @@ example {
   description: Validation Error
   
   request: {
-    url: {{baseUrl}}/api/v1/admin/organizations/:organization_id
+    url: {{baseUrl}}/api/v1/me
     method: PATCH
     mode: json
-    params:path: {
-      organization_id: 
-    }
-  
     body:json: {
       {
-        "name": "",
-        "description": "",
-        "tier_id": ""
+        "name": ""
       }
     }
   }
