@@ -92,13 +92,14 @@
     "eslint-config-next": "16.1.6",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
-    "openapi-typescript-codegen": "^0.29.0",
+    "openapi-typescript-codegen": "^0.30.0",
     "postcss": "^8",
     "tailwindcss": "^4.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^5"
   },
   "overrides": {
+    "handlebars": "4.7.9",
     "@react-jvectormap/core": {
       "react": "^16.8.0 || ^17 || ^18 || ^19",
       "react-dom": "^16.8.0 || ^17 || ^18 || ^19"
