@@ -68,7 +68,6 @@
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
-    "swiper": "^11.2.0",
     "tailwind-merge": "^2.6.0",
     "uuid": "^13.0.0"
   },
