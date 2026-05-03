@@ -4,7 +4,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { OpenAPI } from "@/api";
-import { clearMeCache } from "@/context/MeContext";
+import { clearMeCache, resetAuthFailed } from "@/context/MeContext";
 import { useEffect, useState } from "react";
 import { createTheme } from "@mui/material/styles";
 import { DetailField } from "@/components/entity/EntityDetailView";
@@ -16,6 +16,7 @@ export function logout(router: ReturnType<typeof useRouter>, reason?: { message:
   localStorage.removeItem("token");
   localStorage.removeItem("user.info");
   clearMeCache();
+  resetAuthFailed();
   sessionStorage.setItem("originalUrl", window.location.pathname);
   OpenAPI.TOKEN = undefined;
   router.push(redirectPath);
