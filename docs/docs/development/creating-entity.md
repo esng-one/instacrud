@@ -101,6 +101,30 @@ This automatically creates:
 | PATCH | `/tasks/{item_id}` | Partial update |
 | DELETE | `/tasks/{item_id}` | Delete item |
 
+### Optional: Slim the list response
+
+If your entity has heavy fields that the grid doesn't render — embeddings, large text blobs, internal index arrays like `search_tokens` — pass a `list_projection` model so MongoDB only sends the fields the grid actually needs:
+
+```python
+# In organization_dto.py — extend _ListItemBase and list only grid fields
+from instacrud.api.organization_dto import _ListItemBase
+
+class TaskListItem(_ListItemBase):
+    id: Optional[PydanticObjectId] = Field(None, alias="_id")
+    code: Optional[str] = None
+    name: Optional[str] = None
+    status: Optional[str] = None
+
+# In organization_api.py — pass it to the router
+router.include_router(
+    create_crud_router(Task, list_projection=TaskListItem),
+    prefix="/tasks",
+    tags=["tasks"]
+)
+```
+
+The detail endpoint (`GET /tasks/{id}`) is unaffected and still returns the full document. See `ClientListItem`, `ProjectListItem`, and `ProjectDocumentListItem` in `organization_dto.py` for working examples.
+
 ### Optional: Add to Search
 
 To include your entity in the global search:
