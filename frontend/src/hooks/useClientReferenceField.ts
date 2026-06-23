@@ -2,7 +2,7 @@
 import { useCallback } from "react";
 import { useReferenceField } from "@/hooks/useReferenceField";
 import { ClientsService } from "@/api/services/ClientsService";
-import type { Client_Input as Client } from "@/api/models/Client_Input";
+import type { ClientListItem } from "@/api/models/ClientListItem";
 
 export function useClientReferenceField() {
   const fetchClients = useCallback(
@@ -11,12 +11,12 @@ export function useClientReferenceField() {
   );
 
   const getClientId = useCallback(
-    (c: Client) => String(c._id),
+    (c: ClientListItem) => String(c._id),
     []
   );
 
   const getClientLabel = useCallback(
-    (c: Client) => c.name || c.code || String(c._id),
+    (c: ClientListItem) => c.name || c.code || String(c._id),
     []
   );
 

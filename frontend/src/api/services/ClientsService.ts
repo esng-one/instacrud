@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { Client_Input } from '../models/Client_Input';
+import type { ClientListItem } from '../models/ClientListItem';
 import type { Client_Output } from '../models/Client_Output';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -36,14 +37,14 @@ export class ClientsService {
      * @param skip
      * @param limit
      * @param filters
-     * @returns Client_Output Successful Response
+     * @returns ClientListItem Successful Response
      * @throws ApiError
      */
     public static listItemsClientsGet(
         skip?: number,
         limit: number = 10,
         filters?: (string | null),
-    ): CancelablePromise<Array<Client_Output>> {
+    ): CancelablePromise<Array<ClientListItem>> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/clients',

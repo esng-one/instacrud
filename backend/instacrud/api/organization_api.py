@@ -10,7 +10,10 @@ from beanie import PydanticObjectId
 from loguru import logger
 
 from instacrud.api.api_utils import create_crud_router, role_required
-from instacrud.api.organization_dto import ConversationCreate, Entity, Find
+from instacrud.api.organization_dto import (
+    ClientListItem, ConversationCreate, ContactListItem,
+    Entity, Find, ProjectDocumentListItem, ProjectListItem,
+)
 from instacrud.api.search_service import SearchService
 from instacrud.model.organization_model import Address, Client, Contact, Conversation, Project, ProjectDocument
 from instacrud.model.system_model import Role
@@ -196,10 +199,10 @@ async def delete_conversation(
 router.include_router(conversation_router, prefix="/conversations", tags=["conversations"])
 
 # Standard CRUD routers
-router.include_router(create_crud_router(Client), prefix="/clients", tags=["clients"])
-router.include_router(create_crud_router(Project), prefix="/projects", tags=["projects"])
-router.include_router(create_crud_router(ProjectDocument), prefix="/documents", tags=["documents"])
-router.include_router(create_crud_router(Contact), prefix="/contacts", tags=["contacts"])
+router.include_router(create_crud_router(Client, list_projection=ClientListItem), prefix="/clients", tags=["clients"])
+router.include_router(create_crud_router(Project, list_projection=ProjectListItem), prefix="/projects", tags=["projects"])
+router.include_router(create_crud_router(ProjectDocument, list_projection=ProjectDocumentListItem), prefix="/documents", tags=["documents"])
+router.include_router(create_crud_router(Contact, list_projection=ContactListItem), prefix="/contacts", tags=["contacts"])
 router.include_router(create_crud_router(Address), prefix="/addresses", tags=["addresses"])
 
 # Example of an extra endpoint (beyond standard CRUD)

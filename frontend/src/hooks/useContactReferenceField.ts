@@ -2,7 +2,7 @@
 import { useCallback } from "react";
 import { useReferenceField } from "./useReferenceField";
 import { ContactsService } from "@/api/services/ContactsService";
-import type { Contact_Input as Contact } from "@/api/models/Contact_Input";
+import type { ContactListItem } from "@/api/models/ContactListItem";
 
 export function useContactReferenceField() {
   const fetchContacts = useCallback(
@@ -11,12 +11,12 @@ export function useContactReferenceField() {
   );
 
   const getContactId = useCallback(
-    (c: Contact) => String(c._id),
+    (c: ContactListItem) => String(c._id),
     []
   );
 
   const getContactLabel = useCallback(
-    (c: Contact) => c.name || c.email || "(unnamed contact)",
+    (c: ContactListItem) => c.name || c.email || "(unnamed contact)",
     []
   );
 

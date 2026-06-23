@@ -4,6 +4,7 @@ import { DetailField, EntityDetailView } from "@/components/entity/EntityDetailV
 import type { Project_Input as Project } from "@/api/models/Project_Input";
 import type { Client_Input as Client } from "@/api/models/Client_Input";
 import type { ProjectDocument_Input as ProjectDocument } from "@/api/models/ProjectDocument_Input";
+import type { ProjectDocumentListItem } from "@/api/models/ProjectDocumentListItem";
 import Link from "next/link";
 import { ClientsService } from "@/api/services/ClientsService";
 import { DocumentsService } from "@/api/services/DocumentsService";
@@ -48,7 +49,7 @@ export default function ProjectDetailView({
     items: documents,
     loading: loadingDocuments,
     refetch: refetchDocuments,
-  } = usePaginatedEntityList<ProjectDocument>({
+  } = usePaginatedEntityList<ProjectDocumentListItem>({
     fetchPage: (skip, limit) =>
       DocumentsService.listItemsDocumentsGet(
         skip,

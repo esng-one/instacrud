@@ -15,6 +15,7 @@ import { getApiErrorInfo } from "@/app/lib/api-error";
 
 import { ProjectsService } from "@/api/services/ProjectsService";
 import type { Project_Input as Project } from "@/api/models/Project_Input";
+import type { ProjectListItem } from "@/api/models/ProjectListItem";
 
 import ProjectGrid from "@/components/entity/project/ProjectGrid";
 import ProjectDetailView from "@/components/entity/project/ProjectDetailView";
@@ -38,7 +39,7 @@ export default function ProjectsPage() {
     loading,
     handlePageChange,
     refetch,
-  } = usePaginatedEntityList<Project>({
+  } = usePaginatedEntityList<ProjectListItem>({
     fetchPage: (skip, limit) => ProjectsService.listItemsProjectsGet(skip, limit),
     enabled: !id,
   });

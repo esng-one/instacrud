@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { Project_Input } from '../models/Project_Input';
+import type { ProjectListItem } from '../models/ProjectListItem';
 import type { Project_Output } from '../models/Project_Output';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -36,14 +37,14 @@ export class ProjectsService {
      * @param skip
      * @param limit
      * @param filters
-     * @returns Project_Output Successful Response
+     * @returns ProjectListItem Successful Response
      * @throws ApiError
      */
     public static listItemsProjectsGet(
         skip?: number,
         limit: number = 10,
         filters?: (string | null),
-    ): CancelablePromise<Array<Project_Output>> {
+    ): CancelablePromise<Array<ProjectListItem>> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/projects',

@@ -2,7 +2,7 @@
 import { useCallback } from "react";
 import { useReferenceField } from "@/hooks/useReferenceField";
 import { ProjectsService } from "@/api/services/ProjectsService";
-import type { Project_Input as Project } from "@/api/models/Project_Input";
+import type { ProjectListItem } from "@/api/models/ProjectListItem";
 
 interface UseProjectReferenceOptions {
   skip?: number;
@@ -23,9 +23,9 @@ export function useProjectReferenceField(options?: UseProjectReferenceOptions) {
     );
   }, [skip, limit, filtersKey]);
 
-  const getProjectId = useCallback((p: Project) => String(p._id), []);
+  const getProjectId = useCallback((p: ProjectListItem) => String(p._id), []);
   const getProjectLabel = useCallback(
-    (p: Project) => p.name || p.code || String(p._id),
+    (p: ProjectListItem) => p.name || p.code || String(p._id),
     []
   );
 
