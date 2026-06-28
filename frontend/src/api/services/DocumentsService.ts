@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { ProjectDocument_Input } from '../models/ProjectDocument_Input';
+import type { ProjectDocumentListItem } from '../models/ProjectDocumentListItem';
 import type { ProjectDocument_Output } from '../models/ProjectDocument_Output';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -36,14 +37,14 @@ export class DocumentsService {
      * @param skip
      * @param limit
      * @param filters
-     * @returns ProjectDocument_Output Successful Response
+     * @returns ProjectDocumentListItem Successful Response
      * @throws ApiError
      */
     public static listItemsDocumentsGet(
         skip?: number,
         limit: number = 10,
         filters?: (string | null),
-    ): CancelablePromise<Array<ProjectDocument_Output>> {
+    ): CancelablePromise<Array<ProjectDocumentListItem>> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/documents',

@@ -18,6 +18,7 @@ import { ContactsService } from "@/api/services/ContactsService";
 import { AddressesService } from "@/api/services/AddressesService";
 import { ClientType } from "@/api/models/ClientType";
 import type { Client_Input as Client } from "@/api/models/Client_Input";
+import type { ClientListItem } from "@/api/models/ClientListItem";
 import type { Contact_Input as Contact } from "@/api/models/Contact_Input";
 import type { Address_Input as Address } from "@/api/models/Address_Input";
 
@@ -63,7 +64,7 @@ export default function ClientsPage() {
     loading,
     handlePageChange,
     refetch,
-  } = usePaginatedEntityList<Client>({
+  } = usePaginatedEntityList<ClientListItem>({
     fetchPage: (skip, limit) => ClientsService.listItemsClientsGet(skip, limit),
     enabled: !id,
   });

@@ -15,6 +15,7 @@ import { getApiErrorInfo } from "@/app/lib/api-error";
 
 import { ContactsService } from "@/api/services/ContactsService";
 import type { Contact_Input as Contact } from "@/api/models/Contact_Input";
+import type { ContactListItem } from "@/api/models/ContactListItem";
 
 import ContactGrid from "@/components/entity/contact/ContactGrid";
 import ContactDetailView from "@/components/entity/contact/ContactDetailView";
@@ -38,7 +39,7 @@ export default function ContactsPage() {
     loading,
     handlePageChange,
     refetch,
-  } = usePaginatedEntityList<Contact>({
+  } = usePaginatedEntityList<ContactListItem>({
     fetchPage: (skip, limit) => ContactsService.listItemsContactsGet(skip, limit),
     enabled: !id,
   });

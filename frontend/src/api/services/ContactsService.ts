@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { Contact_Input } from '../models/Contact_Input';
+import type { ContactListItem } from '../models/ContactListItem';
 import type { Contact_Output } from '../models/Contact_Output';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -36,14 +37,14 @@ export class ContactsService {
      * @param skip
      * @param limit
      * @param filters
-     * @returns Contact_Output Successful Response
+     * @returns ContactListItem Successful Response
      * @throws ApiError
      */
     public static listItemsContactsGet(
         skip?: number,
         limit: number = 10,
         filters?: (string | null),
-    ): CancelablePromise<Array<Contact_Output>> {
+    ): CancelablePromise<Array<ContactListItem>> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/contacts',

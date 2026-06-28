@@ -7,104 +7,20 @@ import {
   Typography,
   Box,
   Button,
-  Tooltip,
   alpha,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
-import type { ProjectDocument_Input as ProjectDocument } from "@/api/models/ProjectDocument_Input";
+import type { ProjectDocumentListItem } from "@/api/models/ProjectDocumentListItem";
 
 interface DocumentGridProps {
-  rows: ProjectDocument[];
+  rows: ProjectDocumentListItem[];
   onRowClick?: (id: string) => void;
-  onDelete?: (id: string, row: ProjectDocument) => void;
+  onDelete?: (id: string, row: ProjectDocumentListItem) => void;
   loading?: boolean;
   hasMore?: boolean;
   lastElementRef?: React.RefObject<HTMLDivElement | null>;
-}
-
-function EmbeddingHeatmap({ embedding }: { embedding: number[] | null | undefined }) {
-  if (!embedding || embedding.length === 0) {
-    return null;
-  }
-
-  const maxSegments = 50;
-  const step = Math.max(1, Math.floor(embedding.length / maxSegments));
-  const sampledValues = embedding.filter((_, i) => i % step === 0);
-
-  return (
-    <Tooltip
-      title={
-        <Box>
-          <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>
-            Semantic Vector
-          </Typography>
-          <Typography variant="caption" sx={{ opacity: 0.8 }}>
-            {embedding.length} dimensions
-          </Typography>
-        </Box>
-      }
-      arrow
-      placement="top"
-    >
-      <Box
-        sx={{
-          display: "flex",
-          height: "7px",
-          width: "120px",
-          border: (theme) => `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-          borderRadius: "4px",
-          overflow: "hidden",
-          boxShadow: (theme) => `0 1px 4px ${alpha(theme.palette.primary.main, 0.08)}`,
-          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-          "&:hover": {
-            transform: "scale(1.02)",
-            boxShadow: (theme) => `0 2px 6px ${alpha(theme.palette.primary.main, 0.15)}`,
-          },
-        }}
-      >
-        {sampledValues.map((value, index) => {
-          const clampedValue = Math.max(-0.15, Math.min(0.15, value));
-          const normalized = (clampedValue + 0.15) / 0.3;
-
-          // Blue-based color scheme with high contrast and vivid colors
-          let hue: number;
-          let saturation: number;
-          let lightness: number;
-
-          if (normalized < 0.5) {
-            // Negative values: bright cyan to azure (180 to 210)
-            hue = 180 + (0.5 - normalized) * 60;
-            saturation = 85 + (0.5 - normalized) * 10;
-            lightness = 35 + (0.5 - normalized) * 30;
-          } else {
-            // Positive values: electric blue to deep indigo (210 to 260)
-            hue = 210 + (normalized - 0.5) * 100;
-            saturation = 90 - (normalized - 0.5) * 15;
-            lightness = 55 - (normalized - 0.5) * 30;
-          }
-
-          const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-
-          return (
-            <Box
-              key={index}
-              sx={{
-                flex: 1,
-                backgroundColor: color,
-                minWidth: "2px",
-                transition: "opacity 0.2s",
-                "&:hover": {
-                  opacity: 0.8,
-                },
-              }}
-            />
-          );
-        })}
-      </Box>
-    </Tooltip>
-  );
 }
 
 export default function DocumentGrid({
@@ -269,17 +185,15 @@ export default function DocumentGrid({
               >
                 {doc.content}
               </Typography>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 2,
-                  pt: 2,
-                  borderTop: (theme) => `1px solid ${alpha(theme.palette.divider, 0.08)}`,
-                }}
-              >
-                {onRowClick && doc._id && (
+              {onRowClick && doc._id && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    pt: 2,
+                    borderTop: (theme) => `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+                  }}
+                >
                   <Button
                     variant="contained"
                     startIcon={<VisibilityOutlinedIcon />}
@@ -300,11 +214,8 @@ export default function DocumentGrid({
                   >
                     View Details
                   </Button>
-                )}
-                <Box sx={{ marginLeft: "auto" }}>
-                  <EmbeddingHeatmap embedding={doc.content_embedding} />
                 </Box>
-              </Box>
+              )}
             </Box>
           </AccordionDetails>
         </Accordion>

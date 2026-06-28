@@ -12,8 +12,10 @@ import { usePaginatedEntityList } from "@/hooks/usePaginatedEntityList";
 
 import type { Client_Input as Client } from "@/api/models/Client_Input";
 import type { Contact_Input as Contact } from "@/api/models/Contact_Input";
+import type { ContactListItem } from "@/api/models/ContactListItem";
 import type { Address_Input as Address } from "@/api/models/Address_Input";
 import type { Project_Input as Project } from "@/api/models/Project_Input";
+import type { ProjectListItem } from "@/api/models/ProjectListItem";
 import ProjectEditView from "../project/ProjectEditView";
 import { Modal } from "@/components/ui/modal";
 import Button from "@/components/ui/button/Button";
@@ -43,7 +45,7 @@ export default function ClientDetailExtras({
   refreshAddressesKey?: number;
   contactsForceLoading?: boolean;
   addressesForceLoading?: boolean;
-  contactOptions: ReferenceOption<Contact>[];
+  contactOptions: ReferenceOption<ContactListItem>[];
   addressOptions: ReferenceOption<Address>[];
   loadingContacts: boolean;
   loadingAddresses: boolean;
@@ -72,7 +74,7 @@ export default function ClientDetailExtras({
     loading: loadingProjectsPage,
     handlePageChange: handleProjectPageChange,
     refetch: refetchProjects,
-  } = usePaginatedEntityList<Project>({
+  } = usePaginatedEntityList<ProjectListItem>({
     fetchPage: (skip, limit) =>
       ProjectsService.listItemsProjectsGet(
         skip,
@@ -88,8 +90,8 @@ export default function ClientDetailExtras({
           0,
           ids.length,
           JSON.stringify({ _id: { $in: ids } })
-        )
-      : Promise.resolve([]);
+        ) as unknown as Promise<Contact[]>
+      : Promise.resolve([] as Contact[]);
   }, [item.contact_ids]);
 
   const fetchAddresses = useCallback(() => {
@@ -135,7 +137,7 @@ export default function ClientDetailExtras({
         onEditItem={onEditContact}
         canCreate
         canAddExisting
-        addOptions={contactOptions}
+        addOptions={contactOptions as unknown as ReferenceOption<Contact>[]}
         addOptionsLoading={loadingContacts}
         onAddItem={(id) => {
           onAddContact?.(id);
@@ -215,7 +217,7 @@ export default function ClientDetailExtras({
         {isAddingProject && (
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <ReferenceSelector<Project>
+                <ReferenceSelector<ProjectListItem>
                   field="client_id"
                   value={selectedProjectId}
                   options={projectOptions}

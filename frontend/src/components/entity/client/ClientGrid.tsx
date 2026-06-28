@@ -1,10 +1,10 @@
 // components/entity/client/ClientGrid.tsx
 import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { EntityGrid } from "@/components/entity/EntityGrid";
-import type { Client_Input as Client } from "@/api/models/Client_Input";
+import type { ClientListItem } from "@/api/models/ClientListItem";
 import { formatEnum, formatDate } from "@/app/lib/util";
 
-const clientColumns: GridColDef<Client>[] = [
+const clientColumns: GridColDef<ClientListItem>[] = [
     { field: "name", headerName: "Name", flex: 1, minWidth: 150 },
     { field: "code", headerName: "Code", flex: 0.5, minWidth: 100 },
     { field: "description", headerName: "Description", flex: 1, minWidth: 150 },
@@ -13,7 +13,7 @@ const clientColumns: GridColDef<Client>[] = [
       headerName: "Type",
       flex: 0.5,
       minWidth: 90,
-      renderCell: (params: GridRenderCellParams<Client, Client["type"]>) =>
+      renderCell: (params: GridRenderCellParams<ClientListItem, ClientListItem["type"]>) =>
         formatEnum(String(params.value ?? "")),
       },
     {
@@ -21,18 +21,18 @@ const clientColumns: GridColDef<Client>[] = [
       headerName: "Updated At",
       flex: 0.5,
       minWidth: 100,
-      renderCell: ({ value }) => formatDate(value as Client["updated_at"]),
+      renderCell: ({ value }) => formatDate(value as ClientListItem["updated_at"]),
     },
 ];
 
 interface ClientGridProps {
-  rows: Client[];
+  rows: ClientListItem[];
   page: number;
   pageSize: number;
   totalCount: number;
   onPageChange: (page: number, pageSize: number) => void;
   onRowClick?: (id: string) => void;
-  onDelete?: (id: string, row: Client) => void;
+  onDelete?: (id: string, row: ClientListItem) => void;
 }
 
 export default function ClientGrid({
@@ -45,7 +45,7 @@ export default function ClientGrid({
   onDelete,
 }: ClientGridProps) {
   return (
-    <EntityGrid<Client>
+    <EntityGrid<ClientListItem>
       rows={rows}
       columns={clientColumns}
       idKey="_id"

@@ -1,26 +1,26 @@
 // components/entity/project/ProjectGrid.tsx
 import { GridColDef } from "@mui/x-data-grid";
 import { EntityGrid } from "@/components/entity/EntityGrid";
-import type { Project_Input as Project } from "@/api/models/Project_Input";
+import type { ProjectListItem } from "@/api/models/ProjectListItem";
 import { formatDate } from "@/app/lib/util";
 
-const projectColumns: GridColDef<Project>[] = [
+const projectColumns: GridColDef<ProjectListItem>[] = [
   { field: "name", headerName: "Name", flex: 1, minWidth: 150 },
   { field: "code", headerName: "Code", flex: 0.5, minWidth: 100 },
-  { field: "start_date", headerName: "Start Date", flex: 0.5, minWidth: 100, renderCell: ({ value }) => formatDate(value as Project["start_date"])},
-  { field: "end_date", headerName: "End Date", flex: 0.5, minWidth: 100, renderCell: ({ value }) => formatDate(value as Project["end_date"])},
+  { field: "start_date", headerName: "Start Date", flex: 0.5, minWidth: 100, renderCell: ({ value }) => formatDate(value as ProjectListItem["start_date"])},
+  { field: "end_date", headerName: "End Date", flex: 0.5, minWidth: 100, renderCell: ({ value }) => formatDate(value as ProjectListItem["end_date"])},
   { field: "description", headerName: "Description", flex: 1, minWidth: 150 },
 ];
 
 interface ProjectGridProps {
-  rows: Project[];
+  rows: ProjectListItem[];
   page: number;
   pageSize: number;
   totalCount: number;
   loading?: boolean;
   onPageChange: (page: number, pageSize: number) => void;
   onRowClick?: (id: string) => void;
-  onDelete?: (id: string, row: Project) => void;
+  onDelete?: (id: string, row: ProjectListItem) => void;
   hideFooter?: boolean;
 }
 
@@ -36,7 +36,7 @@ export default function ProjectGrid({
   hideFooter,
 }: ProjectGridProps) {
   return (
-    <EntityGrid<Project>
+    <EntityGrid<ProjectListItem>
       rows={rows}
       columns={projectColumns}
       idKey="_id"

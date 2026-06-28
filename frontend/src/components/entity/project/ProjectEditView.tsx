@@ -2,7 +2,7 @@
 
 import React from "react";
 import { EntityEditView } from "@/components/entity/EntityEditView";
-import type { Client_Input as Client } from "@/api/models/Client_Input";
+import type { ClientListItem } from "@/api/models/ClientListItem";
 import { Project_Input as Project, Project_InputRequired as ProjectRequired } from "@/api/models/Project_Input";
 import { useClientReferenceField } from "@/hooks/useClientReferenceField";
 import {applyRequiredFlags} from "@/app/lib/type-utils";
@@ -37,10 +37,10 @@ export default function ProjectEditView({
     { label: "Description", field: "description", type: "text" },
   ] as const;
 
-  const formFields = applyRequiredFlags<Project, Client>(baseFields, ProjectRequired);
+  const formFields = applyRequiredFlags<Project, ClientListItem>(baseFields, ProjectRequired);
 
   return (
-    <EntityEditView<Project, Client>
+    <EntityEditView<Project, ClientListItem>
       item={item}
       fields={formFields}
       onSubmit={onSubmit}

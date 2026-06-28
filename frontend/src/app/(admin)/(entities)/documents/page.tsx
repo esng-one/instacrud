@@ -15,6 +15,7 @@ import { getApiErrorInfo } from "@/app/lib/api-error";
 
 import { DocumentsService } from "@/api/services/DocumentsService";
 import type { ProjectDocument_Input as ProjectDocument } from "@/api/models/ProjectDocument_Input";
+import type { ProjectDocumentListItem } from "@/api/models/ProjectDocumentListItem";
 
 import DocumentGrid from "@/components/entity/document/DocumentGrid";
 import DocumentDetailView from "@/components/entity/document/DocumentDetailView";
@@ -37,7 +38,7 @@ export default function DocumentsPage() {
     initialLoading,
     lastElementRef,
     refetch,
-  } = useInfiniteScroll<ProjectDocument>({
+  } = useInfiniteScroll<ProjectDocumentListItem>({
     fetchPage: (skip, limit) => DocumentsService.listItemsDocumentsGet(skip, limit),
     pageSize: 10,
   });

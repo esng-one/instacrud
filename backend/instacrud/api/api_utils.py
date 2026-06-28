@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
 from beanie import Document, PydanticObjectId
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 from pymongo.errors import DuplicateKeyError
 
 from instacrud.api.validators import handle_duplicate_key, ensure_exists
@@ -243,6 +243,7 @@ def create_crud_router(
     sort_field: Optional[str] = "-updated_at",
     write_roles: List[Role] = [Role.ADMIN, Role.ORG_ADMIN, Role.USER],
     userScoped: bool = False,
+    list_projection: Optional[Type[BaseModel]] = None,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -267,6 +268,8 @@ def create_crud_router(
             return {"$and": [query, {"user_id": user_ctx.user_id}]}
         return {"user_id": user_ctx.user_id}
 
+    _list_response_model = list_projection if list_projection is not None else model
+
     # --- Create
     @router.post("", response_model=model, dependencies=[Depends(role_required(*write_roles))])
     async def create_item(item_data: model = Body(...)):
@@ -288,7 +291,7 @@ def create_crud_router(
             raise handle_duplicate_key(e, model)
 
     # --- List
-    @router.get("", response_model=List[model])
+    @router.get("", response_model=List[_list_response_model])
     async def list_items(
         skip: int = Query(0, ge=0),
         limit: int = Query(10, ge=1, le=500),
@@ -310,6 +313,8 @@ def create_crud_router(
         # Apply user scope filter
         query = _add_user_scope(query)
 
+        if list_projection is not None:
+            return await model.find(query, projection_model=list_projection).sort(sort_field).skip(skip).limit(limit).to_list()
         return await model.find(query).sort(sort_field).skip(skip).limit(limit).to_list()
 
     # --- Get by ID

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { EntityEditView } from "@/components/entity/EntityEditView";
-import type { Project_Input as Project } from "@/api/models/Project_Input";
+import type { ProjectListItem } from "@/api/models/ProjectListItem";
 import { ProjectDocument_Input as ProjectDocument, ProjectDocument_InputRequired as ProjectDocumentRequired } from "@/api/models/ProjectDocument_Input";
 import { useProjectReferenceField } from "@/hooks/useProjectReferenceField";
 import { applyRequiredFlags } from "@/app/lib/type-utils";
@@ -36,10 +36,10 @@ export default function DocumentEditView({
     { label: "Content", field: "content", type: "textarea" },
   ] as const;
 
-  const formFields = applyRequiredFlags<ProjectDocument, Project>(baseFields, ProjectDocumentRequired);
+  const formFields = applyRequiredFlags<ProjectDocument, ProjectListItem>(baseFields, ProjectDocumentRequired);
 
   return (
-    <EntityEditView<ProjectDocument, Project>
+    <EntityEditView<ProjectDocument, ProjectListItem>
       item={item}
       fields={formFields}
       onSubmit={onSubmit}
