@@ -103,9 +103,9 @@ Enabled: Yes
 #### For Image Generation Models
 
 ```
-Name: DALL-E 3
+Name: GPT Image 1
 Service Provider: OPEN_AI
-Model Identifier: dall-e-3
+Model Identifier: gpt-image-1
 Image Generation Support: Yes
 Enabled: Yes
 ```
