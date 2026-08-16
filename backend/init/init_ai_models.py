@@ -221,28 +221,6 @@ AI_MODELS = [
     # ===================== OPENAI – IMAGE =====================
     {
         "service": AiServiceProvider.OPEN_AI,
-        "name": "DALL·E 3",
-        "model_identifier": "dall-e-3",
-        "credits": 400,
-        "input_tokens_cost": 0.04,
-        "output_tokens_cost": 0.08,
-        "completion": False,
-        "embedding": False,
-        "image_completion": False,
-        "image_generation": True,
-        "reasoning": False,
-        "enabled": True,
-        "rank": 20,
-        "params": {
-            "default_resolution": "1024x1024",
-            "supported_resolutions": ["1024x1024", "1792x1024", "1024x1792"],
-            "quality": ["standard", "hd"]
-        },
-        "tier": 5,
-        "icon": ICON_OPENAI,
-    },
-    {
-        "service": AiServiceProvider.OPEN_AI,
         "name": "GPT Image 1",
         "model_identifier": "gpt-image-1",
         "credits": 400,
