@@ -18,6 +18,7 @@ from instacrud.api import organization_api, system_api, oauth_api, calendar_api,
 from instacrud.api.middleware import register_middlewares
 from instacrud.api.validators import handle_duplicate_key
 from instacrud.database import init_system_db
+from instacrud.model.system_model import AiModel
 
 def custom_generate_unique_id(route: APIRoute) -> str:
     """Strip /api/v1 prefix from operation IDs so generated client method names stay stable."""
@@ -27,9 +28,22 @@ def custom_generate_unique_id(route: APIRoute) -> str:
     operation_id = re.sub(r"\W", "_", f"{route.name}{path}")
     return f"{operation_id}_{list(route.methods)[0].lower()}"
 
+# Retired by their provider but still present in databases seeded earlier
+RETIRED_AI_MODELS = ["dall-e-2", "dall-e-3"]
+
+
+async def disable_retired_ai_models():
+    result = await AiModel.find(
+        {"model_identifier": {"$in": RETIRED_AI_MODELS}, "enabled": True}
+    ).update({"$set": {"enabled": False}})
+    if result and result.modified_count:
+        logger.info(f"Disabled {result.modified_count} retired AI model(s): {RETIRED_AI_MODELS}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_system_db()
+    await disable_retired_ai_models()
     yield
 
 app = FastAPI(title="InstaCRUD", lifespan=lifespan, generate_unique_id_function=custom_generate_unique_id)
