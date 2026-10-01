@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "generate-api": "node -e \"(async () => { const fs = require('fs'); const https = require('http'); const { execSync } = require('child_process'); const file = require('path').join(require('os').tmpdir(), 'openapi.json'); const url = 'http://localhost:8000/openapi.json'; const fileStream = fs.createWriteStream(file); https.get(url, res => res.pipe(fileStream).on('finish', () => { execSync(`npx openapi-typescript-codegen --input ${file} --output ./src/api --client axios`, { stdio: 'inherit' }); execSync('node scripts/add-required-fields.js', { stdio: 'inherit' }); })); })()\"",
     "test": "playwright test",
     "test:watch": "playwright test --ui",
