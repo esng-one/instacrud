@@ -209,6 +209,53 @@ test.describe('Auth failure — 401 from /me redirects to /signin', () => {
     expect(await page.evaluate(() => localStorage.getItem('token') ?? sessionStorage.getItem('token'))).toBeNull();
   });
 
+  test('many concurrent 401s still log out exactly once', async ({ adminAuthenticatedPage: page }) => {
+    // Count logout() calls: each one writes logoutReason (navigations can't show duplicates,
+    // repeated router.push('/signin') collapses into one)
+    await page.addInitScript(() => {
+      const set = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (key: string, value: string) {
+        if (key === 'logoutReason') set.call(sessionStorage, '__logouts', String(Number(sessionStorage.getItem('__logouts') ?? 0) + 1));
+        return set.call(this, key, value);
+      };
+    });
+    await page.goto('/projects');
+    await page.waitForLoadState('networkidle');
+
+    // Reject every data request (keep /me valid so only the global handler reacts)
+    let rejected = 0;
+    await page.route(/\/api\/v1\/(?!me\b|signin|getSettings)/, (route: Route) => {
+      rejected++;
+      return route.fulfill(ME_401_RESPONSE);
+    });
+
+    let signinNavigations = 0;
+    page.on('framenavigated', (frame: Frame) => {
+      if (frame === page.mainFrame() && frame.url().includes('/signin')) signinNavigations++;
+    });
+
+    await page.goto('/projects');
+    await page.waitForURL('**/signin', { timeout: 10_000 });
+    await page.waitForTimeout(1_000);
+
+    expect(rejected).toBeGreaterThan(1);
+    expect(signinNavigations).toBe(1);
+    expect(await page.evaluate(() => sessionStorage.getItem('__logouts'))).toBe('1');
+  });
+
+  test('a 401 from the chat stream logs out', async ({ authenticatedPage: page }) => {
+    await page.goto('/ai-assistant');
+    await page.waitForLoadState('networkidle');
+    await page.route(/\/api\/v1\/(chat|completion)/, (route: Route) => route.fulfill(ME_401_RESPONSE));
+
+    const input = page.locator('textarea, input[placeholder*="message" i]').first();
+    await input.fill('hello');
+    await input.press('Enter');
+
+    await page.waitForURL('**/signin', { timeout: 10_000 });
+    expect(await page.evaluate(() => localStorage.getItem('token') ?? sessionStorage.getItem('token'))).toBeNull();
+  });
+
   test('navigating to a protected route after 401 logout shows signin form', async ({
     adminAuthenticatedPage: page,
   }) => {

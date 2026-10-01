@@ -28,7 +28,7 @@ npm run generate-api # regenerate API client from OpenAPI spec (backend must be 
 
 ## API Client
 
-The frontend uses a generated TypeScript client in `frontend/src/api/`. **Never edit files in `frontend/src/api/` directly — they are auto-generated.** Run `npm run generate-api` (with backend running on `:8000`) to regenerate it after backend changes.
+The frontend uses a generated TypeScript client in `frontend/src/api/`. **Never edit files in `frontend/src/api/` directly — they are auto-generated.** Run `npm run generate-api` (with backend running on `:8000`) to regenerate it after backend changes. Client runtime config (base URL, global 401 handling) lives in `frontend/src/app/lib/apiConfig.ts`, outside the generated folder.
 
 ### Frontend tests (`frontend/`)
 

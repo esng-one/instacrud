@@ -8,6 +8,7 @@ import { syncConversationToServer } from "../utils/serverSync";
 import { imageToBase64 } from "../utils/imageUtils";
 import { getToken } from "@/lib/tokenStorage";
 import { reportUnauthorized } from "@/lib/authFailure";
+import { OpenAPI } from "@/api/core/OpenAPI";
 
 interface UseChatStreamOptions {
   conversationId: string;
@@ -138,7 +139,7 @@ export function useChatStream({
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"}/api/v1/images/generate`,
+        `${OpenAPI.BASE}/api/v1/images/generate`,
         {
           method: "POST",
           headers: {
@@ -294,7 +295,7 @@ export function useChatStream({
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"}/api/v1${endpoint}`,
+        `${OpenAPI.BASE}/api/v1${endpoint}`,
         {
           method: "POST",
           headers: {

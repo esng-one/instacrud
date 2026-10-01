@@ -50,17 +50,3 @@ function addRequiredConstants() {
 }
 
 addRequiredConstants();
-
-// Patch OpenAPI.ts: use env var with localhost fallback
-const OPENAPI_CONFIG = path.resolve("./src/api/core/OpenAPI.ts");
-if (fs.existsSync(OPENAPI_CONFIG)) {
-  let content = fs.readFileSync(OPENAPI_CONFIG, "utf8");
-  const patched = content.replace(
-    /BASE: process\.env\.NEXT_PUBLIC_API_BASE_URL \|\| "[^"]*"/,
-    "BASE: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'"
-  );
-  if (patched !== content) {
-    fs.writeFileSync(OPENAPI_CONFIG, patched);
-    console.log("✅ Patched OpenAPI.ts BASE → process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'");
-  }
-}

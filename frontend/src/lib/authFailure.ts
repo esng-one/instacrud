@@ -6,8 +6,8 @@
 import axios from "axios";
 import { OpenAPI } from "@/api/core/OpenAPI";
 
-// Auth endpoints answer 401 for bad credentials, which is not a session failure
-const AUTH_PATH = /\/api\/v1\/(signin|signup|forgotPassword|resetPassword)(\/|\?|$)/;
+// Auth endpoints answer 401 for bad credentials or codes, which is not a session failure
+const AUTH_PATH = /\/api\/v1\/(signin|signup|session|forgotPassword|resetPassword)(\/|\?|$)/;
 
 let handler: (() => void) | null = null;
 
@@ -21,8 +21,12 @@ export function reportUnauthorized(url: string) {
   handler?.();
 }
 
+// Kept on globalThis so a hot reload replaces the interceptor instead of stacking another
+const g = globalThis as { __authInterceptorId?: number };
+
 export function installAuthInterceptor() {
-  axios.interceptors.response.use(undefined, (error) => {
+  if (g.__authInterceptorId !== undefined) axios.interceptors.response.eject(g.__authInterceptorId);
+  g.__authInterceptorId = axios.interceptors.response.use(undefined, (error) => {
     if (error?.response?.status === 401 && error.config?.headers?.Authorization) {
       reportUnauthorized(error.config.url ?? "");
     }

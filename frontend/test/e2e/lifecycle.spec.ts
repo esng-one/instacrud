@@ -13,11 +13,6 @@
 
 import { test, expect } from './fixtures';
 
-const TEST_ORG_CODE = `test_org_${Date.now()}`;
-const ORG_ADMIN_EMAIL = `orgadmin_${Date.now()}@test.com`;
-const TEST_USER_EMAIL = `user_${Date.now()}@test.com`;
-const TEST_RO_USER_EMAIL = `ro_user_${Date.now()}@test.com`;
-
 test.describe('Integration Lifecycle Tests', () => {
   test('should complete full lifecycle workflow via UI', async ({ adminAuthenticatedPage: page }) => {
     test.setTimeout(120000); // 2 minutes for full flow
