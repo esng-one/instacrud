@@ -32,3 +32,5 @@ volumes/
 
 # Frontend test results
 frontend/test-results/
+# Local research scratch
+backend/research/
