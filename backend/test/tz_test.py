@@ -152,9 +152,7 @@ async def test_project_date_roundtrip(http_client: httpx.AsyncClient, clean_db, 
     """
     from passlib.context import CryptContext
     from instacrud.model.system_model import User, Organization, Role
-    from instacrud.model.organization_model import Project as PModel, Client as CModel
-    from instacrud.database import init_org_db
-    from conftest import wait_for_org_active
+    from conftest import wait_for_org_active, delete_org, delete_users
 
     pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
     admin_email = f"tz_admin_{_TS}@test.com"
@@ -166,110 +164,97 @@ async def test_project_date_roundtrip(http_client: httpx.AsyncClient, clean_db, 
                  hashed_password=pwd.hash("tz_admin_pass1"),
                  name="TZ Admin", role=Role.ADMIN)
     await admin.insert()
+    org_id = user_id = None
 
-    resp = await http_client.post("/api/v1/signin",
-                                  json={"email": admin_email, "password": "tz_admin_pass1"})
-    assert resp.status_code == 200
-    admin_h = {"Authorization": f"Bearer {resp.json()['access_token']}"}
+    try:
+        resp = await http_client.post("/api/v1/signin",
+                                      json={"email": admin_email, "password": "tz_admin_pass1"})
+        assert resp.status_code == 200
+        admin_h = {"Authorization": f"Bearer {resp.json()['access_token']}"}
 
-    # --- Create org ---
-    resp = await http_client.post("/api/v1/admin/organizations",
-                                  json={"name": "TZ Org", "code": org_code},
-                                  headers=admin_h)
-    assert resp.status_code == 200
+        # --- Create org ---
+        resp = await http_client.post("/api/v1/admin/organizations",
+                                      json={"name": "TZ Org", "code": org_code},
+                                      headers=admin_h)
+        assert resp.status_code == 200
 
-    org = await Organization.find_one(Organization.code == org_code)
-    org_id = str(org.id)
-    await wait_for_org_active(http_client, org_id, admin_h)
+        org = await Organization.find_one(Organization.code == org_code)
+        org_id = str(org.id)
+        await wait_for_org_active(http_client, org_id, admin_h)
 
-    # --- Add user ---
-    resp = await http_client.post("/api/v1/admin/add_user",
-                                  json={"email": user_email, "password": "tz_user_pass1",
-                                        "name": "TZ User", "role": "USER",
-                                        "organization_id": org_id},
-                                  headers=admin_h)
-    assert resp.status_code == 200
+        # --- Add user ---
+        resp = await http_client.post("/api/v1/admin/add_user",
+                                      json={"email": user_email, "password": "tz_user_pass1",
+                                            "name": "TZ User", "role": "USER",
+                                            "organization_id": org_id},
+                                      headers=admin_h)
+        assert resp.status_code == 200
+        user_id = (await User.find_one({"email": user_email, "organization_id": org.id})).id
 
-    resp = await http_client.post("/api/v1/signin",
-                                  json={"email": user_email, "password": "tz_user_pass1"})
-    assert resp.status_code == 200
-    user_h = {"Authorization": f"Bearer {resp.json()['access_token']}"}
+        resp = await http_client.post("/api/v1/signin",
+                                      json={"email": user_email, "password": "tz_user_pass1"})
+        assert resp.status_code == 200
+        user_h = {"Authorization": f"Bearer {resp.json()['access_token']}"}
 
-    # --- Create client ---
-    resp = await http_client.post("/api/v1/clients",
-                                  json={"code": f"tz_cl_{_TS}", "name": "TZ Client",
-                                        "type": "COMPANY"},
-                                  headers=user_h)
-    assert resp.status_code == 200
-    client_id = resp.json()["_id"]
+        # --- Create client ---
+        resp = await http_client.post("/api/v1/clients",
+                                      json={"code": f"tz_cl_{_TS}", "name": "TZ Client",
+                                            "type": "COMPANY"},
+                                      headers=user_h)
+        assert resp.status_code == 200
+        client_id = resp.json()["_id"]
 
-    # --- Step 1: POST with plain date ---
-    resp = await http_client.post("/api/v1/projects",
-                                  json={"code": f"TZ_P_{_TS}",
-                                        "client_id": client_id,
-                                        "name": "TZ Test Project",
-                                        "start_date": "2026-03-10"},
-                                  headers=user_h)
-    assert resp.status_code == 200, f"create failed: {resp.text}"
-    project_id = resp.json()["_id"]
+        # --- Step 1: POST with plain date ---
+        resp = await http_client.post("/api/v1/projects",
+                                      json={"code": f"TZ_P_{_TS}",
+                                            "client_id": client_id,
+                                            "name": "TZ Test Project",
+                                            "start_date": "2026-03-10"},
+                                      headers=user_h)
+        assert resp.status_code == 200, f"create failed: {resp.text}"
+        project_id = resp.json()["_id"]
 
-    # --- Step 2: GET by ID — start_date must be UTC-aware in response ---
-    resp = await http_client.get(f"/api/v1/projects/{project_id}", headers=user_h)
-    assert resp.status_code == 200
-    data = resp.json()
-    start_str = data["start_date"]
+        # --- Step 2: GET by ID — start_date must be UTC-aware in response ---
+        resp = await http_client.get(f"/api/v1/projects/{project_id}", headers=user_h)
+        assert resp.status_code == 200
+        data = resp.json()
+        start_str = data["start_date"]
 
-    assert "Z" in start_str or "+00:00" in start_str, \
-        f"start_date should be UTC-aware but got: {start_str!r}"
+        assert "Z" in start_str or "+00:00" in start_str, \
+            f"start_date should be UTC-aware but got: {start_str!r}"
 
-    # Calendar date must NOT have shifted
-    assert start_str.startswith("2026-03-10"), \
-        f"Calendar date shifted on read! Got: {start_str!r}"
+        # Calendar date must NOT have shifted
+        assert start_str.startswith("2026-03-10"), \
+            f"Calendar date shifted on read! Got: {start_str!r}"
 
-    # --- Step 3: PUT with UTC start (from DB response) + plain end_date ---
-    # This is the exact crash scenario before the fix.
-    resp = await http_client.put(f"/api/v1/projects/{project_id}",
-                                 json={"code": f"TZ_P_{_TS}",
-                                       "client_id": client_id,
-                                       "name": "TZ Test Project Updated",
-                                       "start_date": start_str,   # UTC-aware (from DB)
-                                       "end_date": "2026-03-14"}, # plain date (from picker)
-                                 headers=user_h)
-    assert resp.status_code == 200, \
-        f"PUT with mixed-tz dates failed (regression!): {resp.text}"
+        # --- Step 3: PUT with UTC start (from DB response) + plain end_date ---
+        # This is the exact crash scenario before the fix.
+        resp = await http_client.put(f"/api/v1/projects/{project_id}",
+                                     json={"code": f"TZ_P_{_TS}",
+                                           "client_id": client_id,
+                                           "name": "TZ Test Project Updated",
+                                           "start_date": start_str,   # UTC-aware (from DB)
+                                           "end_date": "2026-03-14"}, # plain date (from picker)
+                                     headers=user_h)
+        assert resp.status_code == 200, \
+            f"PUT with mixed-tz dates failed (regression!): {resp.text}"
 
-    updated = resp.json()
-    assert updated["start_date"].startswith("2026-03-10"), \
-        f"start_date shifted after update: {updated['start_date']!r}"
-    assert updated["end_date"].startswith("2026-03-14"), \
-        f"end_date shifted after update: {updated['end_date']!r}"
+        updated = resp.json()
+        assert updated["start_date"].startswith("2026-03-10"), \
+            f"start_date shifted after update: {updated['start_date']!r}"
+        assert updated["end_date"].startswith("2026-03-14"), \
+            f"end_date shifted after update: {updated['end_date']!r}"
 
-    # --- Step 4: Verify end_date < start_date is still rejected ---
-    resp = await http_client.put(f"/api/v1/projects/{project_id}",
-                                 json={"code": f"TZ_P_{_TS}",
-                                       "client_id": client_id,
-                                       "name": "TZ Test Project",
-                                       "start_date": start_str,   # 2026-03-10
-                                       "end_date": "2026-03-01"}, # before start
-                                 headers=user_h)
-    assert resp.status_code == 422, \
-        f"Expected 422 for end < start but got {resp.status_code}: {resp.text}"
-
-    # --- Cleanup ---
-    await init_org_db(org_id)
-    p = await PModel.get(project_id)
-    if p:
-        await p.delete()
-    c = await CModel.get(client_id)
-    if c:
-        await c.delete()
-
-    o = await Organization.get(org_id)
-    if o:
-        await o.delete()
-
-    u = await User.find_one(User.email == user_email)
-    if u:
-        await u.delete()
-
-    await admin.delete()
+        # --- Step 4: Verify end_date < start_date is still rejected ---
+        resp = await http_client.put(f"/api/v1/projects/{project_id}",
+                                     json={"code": f"TZ_P_{_TS}",
+                                           "client_id": client_id,
+                                           "name": "TZ Test Project",
+                                           "start_date": start_str,   # 2026-03-10
+                                           "end_date": "2026-03-01"}, # before start
+                                     headers=user_h)
+        assert resp.status_code == 422, \
+            f"Expected 422 for end < start but got {resp.status_code}: {resp.text}"
+    finally:
+        await delete_users(user_id, admin.id)
+        await delete_org(org_id)

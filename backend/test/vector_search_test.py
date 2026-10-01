@@ -25,10 +25,10 @@ from httpx import ASGITransport
 from instacrud.config import settings
 from instacrud.app import app
 from instacrud.model.system_model import User, Organization, Role
-from instacrud.model.organization_model import Project, ProjectDocument, Client
-from instacrud.database import init_org_db, drop_org_db, get_current_db_id, firestore_mode
+from instacrud.model.organization_model import ProjectDocument
+from instacrud.database import init_org_db, get_current_db_id
 from instacrud.ai.vector_search import clear_vector_search
-from conftest import wait_for_org_active
+from conftest import wait_for_org_active, delete_org, delete_users
 
 # Test configuration
 _TS = str(int(time.time()))
@@ -58,10 +58,11 @@ async def setup_test_org(
     pwd_context: CryptContext,
     embeddings_by_title: dict,
     doc_content: list[dict],
+    ctx: dict,
 ) -> dict:
     """
     Set up a test organization with documents that have embeddings.
-    Returns a dict with org_id, user_token, user_id, project_id, document_ids, etc.
+    Fills ctx (ids are stored as soon as they exist) and returns it.
     """
     # Create organization
     resp = await http_client.post("/api/v1/admin/organizations", json={
@@ -74,6 +75,7 @@ async def setup_test_org(
     org = await Organization.find_one(Organization.code == org_code)
     assert org is not None
     org_id = str(org.id)
+    ctx["org_id"] = org_id
 
     await wait_for_org_active(http_client, org_id, admin_headers)
 
@@ -87,7 +89,8 @@ async def setup_test_org(
         "organization_id": org_id
     }, headers=admin_headers)
     assert resp.status_code == 200
-    org_admin_id = resp.json().get("user_id")
+    org_admin_id = (await User.find_one({"email": org_admin_email, "organization_id": org.id})).id
+    ctx["org_admin_id"] = org_admin_id
 
     # Sign in as org admin to invite user
     resp = await http_client.post("/api/v1/signin", json={
@@ -114,6 +117,7 @@ async def setup_test_org(
     })
     assert resp.status_code == 200
     user_id = resp.json().get("user_id")
+    ctx["user_id"] = user_id
 
     # Sign in as user
     resp = await http_client.post("/api/v1/signin", json={
@@ -161,7 +165,7 @@ async def setup_test_org(
         await doc.insert()
         document_ids.append(str(doc.id))
 
-    return {
+    ctx.update({
         "org_id": org_id,
         "org_admin_id": org_admin_id,
         "org_admin_email": org_admin_email,
@@ -173,95 +177,16 @@ async def setup_test_org(
         "client_id": client_id,
         "project_id": project_id,
         "document_ids": document_ids,
-    }
+    })
+    return ctx
 
 
-async def cleanup_test_org(ctx: dict, test_mode: str):
+async def cleanup_test_org(ctx: dict):
     """Clean up a test organization and all its data."""
-    if not ctx.get("org_id"):
-        return
-
-    if test_mode == "live" and firestore_mode:
-        # In Firestore mode init_org_db can fail with IAM errors in cleanup;
-        # drop_org_db already nukes the whole DB so skip individual doc deletion
-        await drop_org_db(ctx["org_id"])
-        # Clean up system-level records only
-        for email, uid in [
-            (ctx.get("user_email"), ctx.get("user_id")),
-            (ctx.get("org_admin_email"), ctx.get("org_admin_id")),
-        ]:
-            u = await User.get(uid) if uid else None
-            if u is None and email:
-                u = await User.find_one(User.email == email)
-            if u:
-                await u.delete()
-        if ctx.get("invitation_id"):
-            from instacrud.model.system_model import Invitation
-            inv = await Invitation.get(ctx["invitation_id"])
-            if inv:
-                await inv.delete()
-        org = await Organization.get(ctx["org_id"])
-        if org:
-            await org.delete()
-        return
-
-    await init_org_db(ctx["org_id"])
-
-    # Delete documents
-    for doc_id in ctx.get("document_ids", []):
-        doc = await ProjectDocument.get(doc_id)
-        if doc:
-            await doc.delete()
-
-    # Delete project
-    if ctx.get("project_id"):
-        proj = await Project.get(ctx["project_id"])
-        if proj:
-            await proj.delete()
-
-    # Delete client
-    if ctx.get("client_id"):
-        client = await Client.get(ctx["client_id"])
-        if client:
-            await client.delete()
-
-    if test_mode == "live":
-        await drop_org_db(ctx["org_id"])
-
-    # Delete invitation
-    if ctx.get("invitation_id"):
-        from instacrud.model.system_model import Invitation
-        inv = await Invitation.get(ctx["invitation_id"])
-        if inv:
-            await inv.delete()
-
-    # Delete user
-    if ctx.get("user_id"):
-        user = await User.get(ctx["user_id"])
-        if user:
-            await user.delete()
-    else:
-        user = await User.find_one(User.email == ctx.get("user_email"))
-        if user:
-            await user.delete()
-
-    # Delete org admin
-    if ctx.get("org_admin_id"):
-        admin = await User.get(ctx["org_admin_id"])
-        if admin:
-            await admin.delete()
-    else:
-        admin = await User.find_one(User.email == ctx.get("org_admin_email"))
-        if admin:
-            await admin.delete()
-
-    # Delete organization
-    org = await Organization.get(ctx["org_id"])
-    if org:
-        await org.delete()
-
-    # Clear FAISS index for this tenant
-    clear_vector_search(ctx["org_id"])
+    await delete_users(ctx.get("user_id"), ctx.get("org_admin_id"))
+    await delete_org(ctx.get("org_id"))
+    if ctx.get("org_id"):
+        clear_vector_search(ctx["org_id"])
 
 
 # Document content sets for different tenants
@@ -349,44 +274,41 @@ async def vector_search_setup(module_http_client: httpx.AsyncClient, test_mode, 
     await admin_user.insert()
     state.admin_user_id = str(admin_user.id)
 
-    # Sign in as admin
-    resp = await module_http_client.post("/api/v1/signin", json={
-        "email": TEST_ADMIN_EMAIL,
-        "password": TEST_ADMIN_PASSWORD
-    })
-    assert resp.status_code == 200
-    admin_token = resp.json()["access_token"]
-    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+    state.org1_ctx, state.org2_ctx = {}, {}
 
-    # Clear any existing FAISS state
-    clear_vector_search()
+    try:
+        # Sign in as admin
+        resp = await module_http_client.post("/api/v1/signin", json={
+            "email": TEST_ADMIN_EMAIL,
+            "password": TEST_ADMIN_PASSWORD
+        })
+        assert resp.status_code == 200
+        admin_token = resp.json()["access_token"]
+        admin_headers = {"Authorization": f"Bearer {admin_token}"}
 
-    # Setup Org 1 with documents about IoT, lease, and mobile app
-    state.org1_ctx = await setup_test_org(
-        module_http_client, admin_headers, ORG1_CODE, "Vector Test Org 1",
-        ORG1_USER_EMAIL, pwd_context, embeddings_by_title, DOC_CONTENT_ORG1
-    )
+        # Clear any existing FAISS state
+        clear_vector_search()
 
-    # Setup Org 2 with documents about EV, cybersecurity, and wind farm
-    state.org2_ctx = await setup_test_org(
-        module_http_client, admin_headers, ORG2_CODE, "Vector Test Org 2",
-        ORG2_USER_EMAIL, pwd_context, embeddings_by_title, DOC_CONTENT_ORG2
-    )
+        # Setup Org 1 with documents about IoT, lease, and mobile app
+        await setup_test_org(
+            module_http_client, admin_headers, ORG1_CODE, "Vector Test Org 1",
+            ORG1_USER_EMAIL, pwd_context, embeddings_by_title, DOC_CONTENT_ORG1, state.org1_ctx
+        )
 
-    state.initialized = True
+        # Setup Org 2 with documents about EV, cybersecurity, and wind farm
+        await setup_test_org(
+            module_http_client, admin_headers, ORG2_CODE, "Vector Test Org 2",
+            ORG2_USER_EMAIL, pwd_context, embeddings_by_title, DOC_CONTENT_ORG2, state.org2_ctx
+        )
 
-    yield state
+        state.initialized = True
 
-    # Cleanup
-    await cleanup_test_org(state.org1_ctx, test_mode)
-    await cleanup_test_org(state.org2_ctx, test_mode)
-
-    if state.admin_user_id:
-        admin = await User.get(state.admin_user_id)
-        if admin:
-            await admin.delete()
-
-    clear_vector_search()
+        yield state
+    finally:
+        await cleanup_test_org(state.org1_ctx)
+        await cleanup_test_org(state.org2_ctx)
+        await delete_users(state.admin_user_id)
+        clear_vector_search()
 
 
 @pytest.mark.asyncio

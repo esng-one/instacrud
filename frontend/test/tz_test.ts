@@ -16,7 +16,7 @@
  */
 
 import { formatDate, formatDateTime, toLocalIsoDate } from '@/app/lib/util';
-import { createTestContext, signIn, createAuthHeaders } from './helpers';
+import { createTestContext, signIn, createAuthHeaders, deleteOrg } from './helpers';
 import { TEST_CREDENTIALS } from './config';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -165,12 +165,7 @@ describe('Project date roundtrip (integration)', () => {
   }, 30000);
 
   afterAll(async () => {
-    if (orgId && adminToken) {
-      await fetch(`${context.apiUrl}/admin/organizations/${orgId}`, {
-        method: 'DELETE',
-        headers: createAuthHeaders(adminToken),
-      });
-    }
+    if (orgId && adminToken) await deleteOrg(adminToken, orgId);
   });
 
   it('POST project with plain date start_date returns 200', async () => {

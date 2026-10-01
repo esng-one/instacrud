@@ -50,7 +50,7 @@ from instacrud.database import init_org_db  # noqa: E402
 from passlib.context import CryptContext
 import httpx
 from instacrud.model.system_model import User, Organization, Role
-from conftest import wait_for_org_active
+from conftest import wait_for_org_active, delete_org, delete_users
 
 _logger = _logging.getLogger("ai_tools_test")
 
@@ -658,12 +658,13 @@ async def chat_auth_headers(http_client: httpx.AsyncClient, clean_db):
         role=Role.ADMIN,
     )
     await user.insert()
-    resp = await http_client.post("/api/v1/signin", json={"email": email, "password": password})
-    assert resp.status_code == 200, f"Signin failed: {resp.text}"
-    token = resp.json()["access_token"]
-    yield {"Authorization": f"Bearer {token}"}
-    # cleanup
-    await user.delete()
+    try:
+        resp = await http_client.post("/api/v1/signin", json={"email": email, "password": password})
+        assert resp.status_code == 200, f"Signin failed: {resp.text}"
+        token = resp.json()["access_token"]
+        yield {"Authorization": f"Bearer {token}"}
+    finally:
+        await delete_users(user.id)
 
 
 _CHAT_INJECTION_CASES = [
@@ -784,7 +785,7 @@ _CONV_TOOLS = [
 _FIND_TOOLS = [FIND_ENTITIES_TOOL]
 
 
-async def _do_tools_setup(http_client: httpx.AsyncClient) -> dict:
+async def _do_tools_setup(http_client: httpx.AsyncClient, ctx: dict) -> dict:
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     hashed_password = pwd_context.hash(TEST_TOOLS_ADMIN_PASSWORD)
 
@@ -796,6 +797,7 @@ async def _do_tools_setup(http_client: httpx.AsyncClient) -> dict:
     )
     await admin_user.insert()
     admin_user_id = str(admin_user.id)
+    ctx["admin_user_id"] = admin_user_id
 
     resp = await http_client.post("/api/v1/signin", json={
         "email": TEST_TOOLS_ADMIN_EMAIL,
@@ -815,6 +817,7 @@ async def _do_tools_setup(http_client: httpx.AsyncClient) -> dict:
     org = await Organization.find_one(Organization.code == TEST_TOOLS_ORG_CODE)
     assert org is not None
     org_id = str(org.id)
+    ctx["org_id"] = org_id
 
     await wait_for_org_active(http_client, org_id, headers_admin)
 
@@ -827,8 +830,10 @@ async def _do_tools_setup(http_client: httpx.AsyncClient) -> dict:
     }, headers=headers_admin)
     assert resp.status_code == 200, f"Add user failed: {resp.text}"
 
-    test_user = await User.find_one(User.email == TEST_TOOLS_USER_EMAIL)
-    test_user_id = str(test_user.id) if test_user else None
+    test_user = await User.find_one({"email": TEST_TOOLS_USER_EMAIL, "organization_id": org.id})
+    assert test_user is not None
+    test_user_id = str(test_user.id)
+    ctx["test_user_id"] = test_user_id
 
     resp = await http_client.post("/api/v1/signin", json={
         "email": TEST_TOOLS_USER_EMAIL,
@@ -838,66 +843,16 @@ async def _do_tools_setup(http_client: httpx.AsyncClient) -> dict:
     user_token = resp.json()["access_token"]
     headers_user = {"Authorization": f"Bearer {user_token}"}
 
-    return {
+    ctx.update({
         "headers_admin": headers_admin,
         "headers_user": headers_user,
-        "org_id": org_id,
-        "admin_user_id": admin_user_id,
-        "test_user_id": test_user_id,
-    }
+    })
+    return ctx
 
 
 async def _do_tools_cleanup(context: dict):
-    from instacrud.database import drop_org_db
-    from instacrud.database import firestore_mode
-
-    org_id = context.get("org_id")
-    test_user_id = context.get("test_user_id")
-    admin_user_id = context.get("admin_user_id")
-
-    if org_id:
-        if not firestore_mode:
-            await init_org_db(org_id)
-        await drop_org_db(org_id)
-
-    if firestore_mode:
-        if org_id:
-            organization = await Organization.get(org_id)
-            if organization:
-                await organization.delete()
-        for email, uid in [
-            (TEST_TOOLS_USER_EMAIL, test_user_id),
-            (TEST_TOOLS_ADMIN_EMAIL, admin_user_id),
-        ]:
-            u = await User.get(uid) if uid else None
-            if u is None and email:
-                u = await User.find_one(User.email == email)
-            if u:
-                await u.delete()
-        return
-
-    if test_user_id:
-        user = await User.get(test_user_id)
-        if user:
-            await user.delete()
-    else:
-        user = await User.find_one(User.email == TEST_TOOLS_USER_EMAIL)
-        if user:
-            await user.delete()
-
-    if org_id:
-        organization = await Organization.get(org_id)
-        if organization:
-            await organization.delete()
-
-    if admin_user_id:
-        admin = await User.get(admin_user_id)
-        if admin:
-            await admin.delete()
-    else:
-        admin = await User.find_one(User.email == TEST_TOOLS_ADMIN_EMAIL)
-        if admin:
-            await admin.delete()
+    await delete_users(context.get("test_user_id"), context.get("admin_user_id"))
+    await delete_org(context.get("org_id"))
 
 
 @pytest.fixture
@@ -908,7 +863,12 @@ async def tools_test_context(http_client: httpx.AsyncClient, clean_db, test_mode
         pytest.skip("LLM tool tests require real API keys and cannot run in mock mode")
 
     if not _tools_setup_done:
-        _tools_cached_context = await _do_tools_setup(http_client)
+        _tools_cached_context = {}
+        try:
+            await _do_tools_setup(http_client, _tools_cached_context)
+        except BaseException:
+            await _do_tools_cleanup(_tools_cached_context)
+            raise
         _tools_setup_done = True
 
     _tools_use_count += 1
@@ -1072,40 +1032,6 @@ async def _oai_tool_loop(prompt: str, tools, org_id: str, max_iter: int = 10):
     return "", called
 
 
-async def _cleanup_clients(org_id: str, code_prefix: str) -> None:
-    await init_org_db(org_id)
-    from instacrud.model.organization_model import Client
-    docs = await Client.find({"code": {"$regex": f"^{code_prefix}"}}).to_list()
-    for doc in docs:
-        try:
-            await doc.delete()
-        except Exception:
-            pass
-
-
-async def _cleanup_convs(org_id: str, user_id: str, title_prefix: str) -> None:
-    await init_org_db(org_id)
-    from instacrud.model.organization_model import Conversation
-    convs = await Conversation.find({"user_id": _ObjId(user_id)}).to_list()
-    for c in convs:
-        if c.title and c.title.startswith(title_prefix):
-            try:
-                await c.delete()
-            except Exception:
-                pass
-
-
-async def _cleanup_projects(org_id: str, code: str) -> None:
-    await init_org_db(org_id)
-    from instacrud.model.organization_model import Project
-    docs = await Project.find({"code": code}).to_list()
-    for doc in docs:
-        try:
-            await doc.delete()
-        except Exception:
-            pass
-
-
 def _is_api_key_error(exc: Exception) -> bool:
     msg = str(exc).lower()
     return any(k in msg for k in (
@@ -1168,7 +1094,6 @@ async def test_crud_tools_langchain_claude(tools_test_context):
         raise
     finally:
         current_user_context.reset(token)
-        await _cleanup_clients(org_id, code)
 
 
 @pytest.mark.asyncio
@@ -1207,7 +1132,6 @@ async def test_crud_tools_langchain_openai(tools_test_context):
         raise
     finally:
         current_user_context.reset(token)
-        await _cleanup_clients(org_id, code)
 
 
 @pytest.mark.asyncio
@@ -1246,7 +1170,6 @@ async def test_crud_tools_anthropic_sdk(tools_test_context):
         raise
     finally:
         current_user_context.reset(token)
-        await _cleanup_clients(org_id, code)
 
 
 @pytest.mark.asyncio
@@ -1285,7 +1208,6 @@ async def test_crud_tools_openai_sdk(tools_test_context):
         raise
     finally:
         current_user_context.reset(token)
-        await _cleanup_clients(org_id, code)
 
 
 @pytest.mark.asyncio
@@ -1326,7 +1248,6 @@ async def test_conversations_tools_langchain_claude(tools_test_context):
         raise
     finally:
         current_user_context.reset(token)
-        await _cleanup_convs(org_id, user_id, _CRUD_PREFIX)
 
 
 @pytest.mark.asyncio
@@ -1354,14 +1275,12 @@ async def test_find_entities_tool_langchain_openai(tools_test_context):
         created_id = doc["id"]
     except Exception as exc:
         current_user_context.reset(token)
-        await _cleanup_clients(org_id, unique_code)
         raise exc
 
     try:
         llm = ChatOpenAI(model=_GPT_MINI, temperature=0)
     except Exception as exc:
         current_user_context.reset(token)
-        await _cleanup_clients(org_id, unique_code)
         pytest.skip(f"Cannot init ChatOpenAI: {exc}")
 
     try:
@@ -1380,7 +1299,6 @@ async def test_find_entities_tool_langchain_openai(tools_test_context):
         raise
     finally:
         current_user_context.reset(token)
-        await _cleanup_clients(org_id, unique_code)
 
 
 @pytest.mark.asyncio
@@ -1412,14 +1330,12 @@ async def test_project_date_shift_smart(tools_test_context):
         })
     except Exception as exc:
         current_user_context.reset(token)
-        await _cleanup_projects(org_id, proj_code)
         raise exc
 
     try:
         llm = ChatAnthropic(model=_CLAUDE_HAIKU, max_tokens=2048, temperature=0)
     except Exception as exc:
         current_user_context.reset(token)
-        await _cleanup_projects(org_id, proj_code)
         pytest.skip(f"Cannot init ChatAnthropic: {exc}")
 
     all_tools = _CRUD_TOOLS + _FIND_TOOLS
@@ -1448,7 +1364,6 @@ async def test_project_date_shift_smart(tools_test_context):
         raise
     finally:
         current_user_context.reset(token)
-        await _cleanup_projects(org_id, proj_code)
 
 
 @pytest.mark.asyncio
@@ -1478,14 +1393,12 @@ async def test_client_rename_smart(tools_test_context):
         })
     except Exception as exc:
         current_user_context.reset(token)
-        await _cleanup_clients(org_id, cli_code)
         raise exc
 
     try:
         llm = ChatOpenAI(model=_GPT_MINI, temperature=0)
     except Exception as exc:
         current_user_context.reset(token)
-        await _cleanup_clients(org_id, cli_code)
         pytest.skip(f"Cannot init ChatOpenAI: {exc}")
 
     all_tools = _CRUD_TOOLS + _FIND_TOOLS
@@ -1513,4 +1426,3 @@ async def test_client_rename_smart(tools_test_context):
         raise
     finally:
         current_user_context.reset(token)
-        await _cleanup_clients(org_id, cli_code)

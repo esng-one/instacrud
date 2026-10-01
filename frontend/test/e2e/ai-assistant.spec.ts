@@ -274,6 +274,7 @@ baseTest.describe('Conversation Re-sync Merge Cases (API)', () => {
   });
 
   baseTest.afterAll(async () => {
+    for (const id of createdIds) await apiCtx.delete(`conversations/${id}`);
     await apiCtx.dispose();
   });
 
@@ -296,8 +297,13 @@ baseTest.describe('Conversation Re-sync Merge Cases (API)', () => {
     return r.json();
   };
 
-  const post = (body: object) =>
-    apiCtx.post('conversations', { data: body });
+  const createdIds = new Set<string>();
+  const post = async (body: object) => {
+    const r = await apiCtx.post('conversations', { data: body });
+    const id = r.ok() ? (await r.json())._id : null;
+    if (id) createdIds.add(id);
+    return r;
+  };
 
   baseTest('case 1: server only — GET by external_uuid returns exactly 1', async () => {
     const uuid = makeUuid();

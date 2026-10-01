@@ -15,6 +15,7 @@ import time
 from datetime import datetime, timezone, timedelta
 from passlib.context import CryptContext
 from instacrud.model.system_model import User, Organization, Role
+from conftest import delete_org, delete_users
 
 
 # ---------------------------------------------------------------------------
@@ -277,62 +278,63 @@ DOCUMENT_ABSENT_FIELDS = ["search_tokens", "content_embedding"]
 DOCUMENT_PRESENT_FIELDS = ["_id", "project_id", "code", "name", "content", "description", "updated_at"]
 
 
-async def _setup_org_user(http_client, admin_headers, ts):
-    """Create an org and return user token headers."""
-    org_code = f"proj_org_{ts}"
-    resp = await http_client.post("/api/v1/admin/organizations", json={
-        "code": org_code,
-        "name": f"Projection Org {ts}",
-    }, headers=admin_headers)
-    assert resp.status_code == 200, resp.text
+@pytest.fixture
+async def user_hdr(http_client: httpx.AsyncClient, clean_db, request):
+    """Admin + org + user for one test; everything is removed afterwards (live-safe)."""
+    ts = f"{time.time_ns()}_{request.node.name[-12:]}"
+    admin_email = f"lp_admin_{ts}@test.com"
+    user_email = f"proj_user_{ts}@test.com"
+    org_id = user_id = None
 
-    org = await Organization.find_one(Organization.code == org_code)
-    assert org is not None
-    org_id = str(org.id)
-
-    resp = await http_client.post("/api/v1/admin/add_user", json={
-        "email": f"proj_user_{ts}@test.com",
-        "password": "testpass1",
-        "name": f"Proj User {ts}",
-        "role": "USER",
-        "organization_id": org_id,
-    }, headers=admin_headers)
-    assert resp.status_code == 200, resp.text
-
-    from conftest import wait_for_org_active
-    await wait_for_org_active(http_client, org_id, admin_headers)
-
-    resp = await http_client.post("/api/v1/signin", json={
-        "email": f"proj_user_{ts}@test.com", "password": "testpass1"
-    })
-    assert resp.status_code == 200, resp.text
-    return {"Authorization": "Bearer " + resp.json()["access_token"]}
-
-
-async def _admin_headers(http_client):
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     admin = User(
-        email="lp_admin@test.com",
-        hashed_password=pwd_context.hash("adminpass"),
+        email=admin_email,
+        hashed_password=CryptContext(schemes=["bcrypt"], deprecated="auto").hash("adminpass"),
         name="LP Admin",
         role=Role.ADMIN,
     )
     await admin.insert()
-    resp = await http_client.post("/api/v1/signin", json={
-        "email": "lp_admin@test.com", "password": "adminpass"
-    })
-    assert resp.status_code == 200, resp.text
-    return {"Authorization": "Bearer " + resp.json()["access_token"]}
+    try:
+        resp = await http_client.post("/api/v1/signin", json={"email": admin_email, "password": "adminpass"})
+        assert resp.status_code == 200, resp.text
+        admin_hdr = {"Authorization": "Bearer " + resp.json()["access_token"]}
+
+        org_code = f"proj_org_{ts}"
+        resp = await http_client.post("/api/v1/admin/organizations", json={
+            "code": org_code,
+            "name": f"Projection Org {ts}",
+        }, headers=admin_hdr)
+        assert resp.status_code == 200, resp.text
+        org = await Organization.find_one(Organization.code == org_code)
+        assert org is not None
+        org_id = str(org.id)
+
+        resp = await http_client.post("/api/v1/admin/add_user", json={
+            "email": user_email,
+            "password": "testpass1",
+            "name": f"Proj User {ts}",
+            "role": "USER",
+            "organization_id": org_id,
+        }, headers=admin_hdr)
+        assert resp.status_code == 200, resp.text
+        user = await User.find_one({"email": user_email, "organization_id": org.id})
+        assert user is not None
+        user_id = user.id
+
+        from conftest import wait_for_org_active
+        await wait_for_org_active(http_client, org_id, admin_hdr)
+
+        resp = await http_client.post("/api/v1/signin", json={"email": user_email, "password": "testpass1"})
+        assert resp.status_code == 200, resp.text
+        yield {"Authorization": "Bearer " + resp.json()["access_token"]}
+    finally:
+        await delete_users(user_id, admin.id)
+        await delete_org(org_id)
 
 
 @pytest.mark.asyncio
-async def test_client_list_returns_only_projected_fields(
-    http_client: httpx.AsyncClient, clean_db, test_mode
-):
+async def test_client_list_returns_only_projected_fields(http_client: httpx.AsyncClient, user_hdr):
     """GET /clients list returns only ClientListItem fields; detail returns full document."""
-    admin_hdr = await _admin_headers(http_client)
-    ts = str(int(time.time())) + "_cli"
-    user_hdr = await _setup_org_user(http_client, admin_hdr, ts)
+    ts = str(time.time_ns())
 
     payload = {**LARGE_CLIENT_PAYLOAD, "code": f"tc_{ts}"}
     resp = await http_client.post("/api/v1/clients", json=payload, headers=user_hdr)
@@ -361,13 +363,9 @@ async def test_client_list_returns_only_projected_fields(
 
 
 @pytest.mark.asyncio
-async def test_project_list_returns_only_projected_fields(
-    http_client: httpx.AsyncClient, clean_db, test_mode
-):
+async def test_project_list_returns_only_projected_fields(http_client: httpx.AsyncClient, user_hdr):
     """GET /projects list returns only ProjectListItem fields; detail returns full document."""
-    admin_hdr = await _admin_headers(http_client)
-    ts = str(int(time.time())) + "_prj"
-    user_hdr = await _setup_org_user(http_client, admin_hdr, ts)
+    ts = str(time.time_ns())
 
     payload = {**LARGE_PROJECT_PAYLOAD, "code": f"tp_{ts}", "client_id": None}
     resp = await http_client.post("/api/v1/projects", json=payload, headers=user_hdr)
@@ -396,13 +394,9 @@ async def test_project_list_returns_only_projected_fields(
 
 
 @pytest.mark.asyncio
-async def test_contact_list_returns_only_projected_fields(
-    http_client: httpx.AsyncClient, clean_db, test_mode
-):
+async def test_contact_list_returns_only_projected_fields(http_client: httpx.AsyncClient, user_hdr):
     """GET /contacts list returns only ContactListItem fields; detail returns full document."""
-    admin_hdr = await _admin_headers(http_client)
-    ts = str(int(time.time())) + "_cnt"
-    user_hdr = await _setup_org_user(http_client, admin_hdr, ts)
+    ts = str(time.time_ns())
 
     payload = {**LARGE_CONTACT_PAYLOAD, "phone": f"+1555{ts[-6:]}"}
     resp = await http_client.post("/api/v1/contacts", json=payload, headers=user_hdr)
@@ -428,13 +422,9 @@ async def test_contact_list_returns_only_projected_fields(
 
 
 @pytest.mark.asyncio
-async def test_document_list_returns_only_projected_fields(
-    http_client: httpx.AsyncClient, clean_db, test_mode
-):
+async def test_document_list_returns_only_projected_fields(http_client: httpx.AsyncClient, user_hdr):
     """GET /documents list returns only ProjectDocumentListItem fields; content_embedding absent."""
-    admin_hdr = await _admin_headers(http_client)
-    ts = str(int(time.time())) + "_doc"
-    user_hdr = await _setup_org_user(http_client, admin_hdr, ts)
+    ts = str(time.time_ns())
 
     # Create a project first (document requires project_id)
     proj_resp = await http_client.post("/api/v1/projects", json={

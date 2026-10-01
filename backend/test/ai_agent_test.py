@@ -16,8 +16,7 @@ import httpx
 from passlib.context import CryptContext
 
 from instacrud.model.system_model import User, Organization, Role
-from instacrud.database import init_org_db, drop_org_db, firestore_mode
-from conftest import wait_for_org_active
+from conftest import wait_for_org_active, delete_org, delete_users
 
 # Test configuration
 _TS = str(int(time.time()))
@@ -33,7 +32,7 @@ _setup_done = False
 _use_count = 0
 
 
-async def _do_setup(http_client: httpx.AsyncClient) -> dict:
+async def _do_setup(http_client: httpx.AsyncClient, ctx: dict) -> dict:
     """Perform the actual setup - called once per module."""
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     hashed_password = pwd_context.hash(TEST_ADMIN_PASSWORD)
@@ -47,6 +46,7 @@ async def _do_setup(http_client: httpx.AsyncClient) -> dict:
     )
     await admin_user.insert()
     admin_user_id = str(admin_user.id)
+    ctx["admin_user_id"] = admin_user_id
 
     # Sign in as ADMIN
     resp = await http_client.post("/api/v1/signin", json={
@@ -68,6 +68,7 @@ async def _do_setup(http_client: httpx.AsyncClient) -> dict:
     org = await Organization.find_one(Organization.code == TEST_ORG_CODE)
     assert org is not None
     org_id = str(org.id)
+    ctx["org_id"] = org_id
 
     await wait_for_org_active(http_client, org_id, headers_admin)
 
@@ -81,8 +82,10 @@ async def _do_setup(http_client: httpx.AsyncClient) -> dict:
     }, headers=headers_admin)
     assert resp.status_code == 200, f"Add user failed: {resp.text}"
 
-    test_user = await User.find_one(User.email == TEST_USER_EMAIL)
-    test_user_id = str(test_user.id) if test_user else None
+    test_user = await User.find_one({"email": TEST_USER_EMAIL, "organization_id": org.id})
+    assert test_user is not None
+    test_user_id = str(test_user.id)
+    ctx["test_user_id"] = test_user_id
 
     # Sign in as test user
     resp = await http_client.post("/api/v1/signin", json={
@@ -93,68 +96,17 @@ async def _do_setup(http_client: httpx.AsyncClient) -> dict:
     user_token = resp.json()["access_token"]
     headers_user = {"Authorization": f"Bearer {user_token}"}
 
-    return {
+    ctx.update({
         "headers_admin": headers_admin,
         "headers_user": headers_user,
-        "org_id": org_id,
-        "admin_user_id": admin_user_id,
-        "test_user_id": test_user_id,
-    }
+    })
+    return ctx
 
 
 async def _do_cleanup(context: dict):
     """Perform cleanup of all created resources."""
-    org_id = context.get("org_id")
-    test_user_id = context.get("test_user_id")
-    admin_user_id = context.get("admin_user_id")
-
-    # Drop the organization database first
-    if org_id:
-        if not firestore_mode:
-            await init_org_db(org_id)
-        await drop_org_db(org_id)
-
-    if firestore_mode:
-        # In Firestore mode drop_org_db deletes the whole DB; skip direct doc deletion
-        # Just clean up system-level records
-        if org_id:
-            organization = await Organization.get(org_id)
-            if organization:
-                await organization.delete()
-        for email, uid in [(TEST_USER_EMAIL, test_user_id), (TEST_ADMIN_EMAIL, admin_user_id)]:
-            if uid:
-                u = await User.get(uid)
-            else:
-                u = await User.find_one(User.email == email)
-            if u:
-                await u.delete()
-        return
-
-    # Delete test user
-    if test_user_id:
-        user = await User.get(test_user_id)
-        if user:
-            await user.delete()
-    else:
-        user = await User.find_one(User.email == TEST_USER_EMAIL)
-        if user:
-            await user.delete()
-
-    # Delete organization
-    if org_id:
-        organization = await Organization.get(org_id)
-        if organization:
-            await organization.delete()
-
-    # Delete admin user
-    if admin_user_id:
-        admin = await User.get(admin_user_id)
-        if admin:
-            await admin.delete()
-    else:
-        admin = await User.find_one(User.email == TEST_ADMIN_EMAIL)
-        if admin:
-            await admin.delete()
+    await delete_users(context.get("test_user_id"), context.get("admin_user_id"))
+    await delete_org(context.get("org_id"))
 
 
 @pytest.fixture
@@ -172,7 +124,12 @@ async def ai_test_context(http_client: httpx.AsyncClient, clean_db, test_mode, r
 
     # Only do setup once per module
     if not _setup_done:
-        _cached_context = await _do_setup(http_client)
+        _cached_context = {}
+        try:
+            await _do_setup(http_client, _cached_context)
+        except BaseException:
+            await _do_cleanup(_cached_context)
+            raise
         _setup_done = True
 
     _use_count += 1
@@ -441,7 +398,7 @@ _sync_setup_done = False
 _sync_use_count = 0
 
 
-async def _do_sync_setup(http_client: httpx.AsyncClient) -> dict:
+async def _do_sync_setup(http_client: httpx.AsyncClient, ctx: dict) -> dict:
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     hashed_password = pwd_context.hash(TEST_SYNC_ADMIN_PASSWORD)
 
@@ -453,6 +410,7 @@ async def _do_sync_setup(http_client: httpx.AsyncClient) -> dict:
     )
     await admin_user.insert()
     admin_user_id = str(admin_user.id)
+    ctx["admin_user_id"] = admin_user_id
 
     resp = await http_client.post("/api/v1/signin", json={
         "email": TEST_SYNC_ADMIN_EMAIL,
@@ -472,6 +430,7 @@ async def _do_sync_setup(http_client: httpx.AsyncClient) -> dict:
     org = await Organization.find_one(Organization.code == TEST_SYNC_ORG_CODE)
     assert org is not None
     org_id = str(org.id)
+    ctx["org_id"] = org_id
 
     await wait_for_org_active(http_client, org_id, headers_admin)
 
@@ -484,8 +443,10 @@ async def _do_sync_setup(http_client: httpx.AsyncClient) -> dict:
     }, headers=headers_admin)
     assert resp.status_code == 200, f"Add user failed: {resp.text}"
 
-    test_user = await User.find_one(User.email == TEST_SYNC_USER_EMAIL)
-    test_user_id = str(test_user.id) if test_user else None
+    test_user = await User.find_one({"email": TEST_SYNC_USER_EMAIL, "organization_id": org.id})
+    assert test_user is not None
+    test_user_id = str(test_user.id)
+    ctx["test_user_id"] = test_user_id
 
     resp = await http_client.post("/api/v1/signin", json={
         "email": TEST_SYNC_USER_EMAIL,
@@ -495,60 +456,16 @@ async def _do_sync_setup(http_client: httpx.AsyncClient) -> dict:
     user_token = resp.json()["access_token"]
     headers_user = {"Authorization": f"Bearer {user_token}"}
 
-    return {
+    ctx.update({
         "headers_admin": headers_admin,
         "headers_user": headers_user,
-        "org_id": org_id,
-        "admin_user_id": admin_user_id,
-        "test_user_id": test_user_id,
-    }
+    })
+    return ctx
 
 
 async def _do_sync_cleanup(context: dict):
-    org_id = context.get("org_id")
-    test_user_id = context.get("test_user_id")
-    admin_user_id = context.get("admin_user_id")
-
-    if org_id:
-        if not firestore_mode:
-            await init_org_db(org_id)
-        await drop_org_db(org_id)
-
-    if firestore_mode:
-        if org_id:
-            organization = await Organization.get(org_id)
-            if organization:
-                await organization.delete()
-        for email, uid in [(TEST_SYNC_USER_EMAIL, test_user_id), (TEST_SYNC_ADMIN_EMAIL, admin_user_id)]:
-            u = await User.get(uid) if uid else None
-            if u is None and email:
-                u = await User.find_one(User.email == email)
-            if u:
-                await u.delete()
-        return
-
-    if test_user_id:
-        user = await User.get(test_user_id)
-        if user:
-            await user.delete()
-    else:
-        user = await User.find_one(User.email == TEST_SYNC_USER_EMAIL)
-        if user:
-            await user.delete()
-
-    if org_id:
-        organization = await Organization.get(org_id)
-        if organization:
-            await organization.delete()
-
-    if admin_user_id:
-        admin = await User.get(admin_user_id)
-        if admin:
-            await admin.delete()
-    else:
-        admin = await User.find_one(User.email == TEST_SYNC_ADMIN_EMAIL)
-        if admin:
-            await admin.delete()
+    await delete_users(context.get("test_user_id"), context.get("admin_user_id"))
+    await delete_org(context.get("org_id"))
 
 
 @pytest.fixture
@@ -556,7 +473,12 @@ async def sync_test_context(http_client: httpx.AsyncClient, clean_db, request):
     global _sync_cached_context, _sync_setup_done, _sync_use_count
 
     if not _sync_setup_done:
-        _sync_cached_context = await _do_sync_setup(http_client)
+        _sync_cached_context = {}
+        try:
+            await _do_sync_setup(http_client, _sync_cached_context)
+        except BaseException:
+            await _do_sync_cleanup(_sync_cached_context)
+            raise
         _sync_setup_done = True
 
     _sync_use_count += 1

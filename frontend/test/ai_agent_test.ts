@@ -13,6 +13,7 @@ import {
   createTestContext,
   signIn,
   createAuthHeaders,
+  deleteOrg,
   type TestContext
 } from './helpers';
 import { TEST_CREDENTIALS } from './config';
@@ -93,16 +94,8 @@ describe('AI Agent Tests', () => {
   });
 
   afterAll(async () => {
-    // Cleanup: Delete organization and users
-    if (orgId && adminToken) {
-      const adminHeaders = createAuthHeaders(adminToken);
-
-      // Delete organization (will cascade delete users)
-      await fetch(`${context.apiUrl}/admin/organizations/${orgId}`, {
-        method: 'DELETE',
-        headers: adminHeaders,
-      });
-    }
+    // Deletes the org with its users, DB and usage
+    if (orgId && adminToken) await deleteOrg(adminToken, orgId);
   });
 
   describe('Text Completion', () => {

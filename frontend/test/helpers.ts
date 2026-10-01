@@ -86,6 +86,17 @@ export function createAuthHeaders(token: string): HeadersInit {
 }
 
 /**
+ * Delete a test org by id (two-step confirm). Also removes its users, DB and usage.
+ */
+export async function deleteOrg(adminToken: string, orgId: string): Promise<void> {
+  const url = `${getApiUrl()}/admin/organizations/${orgId}`;
+  const headers = createAuthHeaders(adminToken);
+  const { org_name_hash } = await (await fetch(url, { method: 'DELETE', headers })).json();
+  const resp = await fetch(`${url}?confirm_hash=${org_name_hash}`, { method: 'DELETE', headers });
+  if (!resp.ok) throw new Error(`delete org ${orgId} failed: ${resp.status} ${await resp.text()}`);
+}
+
+/**
  * Wait for a condition to be true
  */
 export async function waitFor(

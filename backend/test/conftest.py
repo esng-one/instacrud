@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import AsyncGenerator
 
 import httpx
+from beanie import PydanticObjectId
 from loguru import logger as _loguru_logger
 from motor.motor_asyncio import AsyncIOMotorClient
 from httpx import ASGITransport
@@ -59,6 +60,32 @@ async def wait_for_org_active(
                 raise RuntimeError(f"Org {org_id} provisioning FAILED")
         await asyncio.sleep(poll_interval)
     raise TimeoutError(f"Org {org_id} provisioning timed out after {timeout}s")
+
+
+async def delete_users(*user_ids):
+    """Delete test users by id, with their password reset tokens."""
+    from instacrud.model.system_model import PasswordResetToken
+    for uid in filter(None, user_ids):
+        await PasswordResetToken.find({"user_id": PydanticObjectId(uid)}).delete_many()
+        user = await User.get(PydanticObjectId(uid))
+        if user:
+            await user.delete()
+
+
+async def delete_org(org_id):
+    """Delete a test org by id: its database, usage rows, invitations and the org itself."""
+    if not org_id:
+        return
+    from instacrud.database import drop_org_db
+    from instacrud.model.system_model import Invitation, Usage, UsageHistory
+    oid = PydanticObjectId(org_id)
+    await drop_org_db(str(oid))
+    await Usage.find({"organization_id": oid}).delete_many()
+    await UsageHistory.find({"organization_id": oid}).delete_many()
+    await Invitation.find({"organization_id": oid}).delete_many()
+    org = await Organization.get(oid)
+    if org:
+        await org.delete()
 
 
 def _get_all_test_files():
