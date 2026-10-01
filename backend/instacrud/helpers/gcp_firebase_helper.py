@@ -254,12 +254,16 @@ def gcp_firestore_build_mongo_url(database_id: str, credentials=None) -> str:
 
 
 async def gcp_firestore_wait_for_iam(mongo_url: str, timeout_seconds: int = 240,
-                                     required_successes: int = 3):
+                                     required_successes: int = 5):
     """Poll until IAM role propagates and data operations succeed consistently.
 
     Requires multiple consecutive successes because Firestore IAM propagation
     can be flaky — a single successful probe does not guarantee the next
-    connection will also work.
+    connection will also work. Each probe uses a fresh client, so a higher
+    count samples more backend nodes before we trust that the creds have
+    settled. Raised 3 → 5 after a provisioning failure where the real connect
+    failed one second after 3 consecutive probe successes (loadBalanced routes
+    each connection to a possibly-different node).
 
     DEMO ONLY! Blocks the request for up to 2 minutes while GCP IAM propagates.
     In production this should be done asynchronously (e.g. task queue / callback)
