@@ -175,8 +175,24 @@ def gcp_firestore_create_user_creds(database_id: str, username: str, credentials
         user_creds=firestore_admin_types.UserCreds(),
         user_creds_id=username,
     )
-    response = client.create_user_creds(request)
-    return response.secure_password, response.resource_identity.principal
+
+    # Right after a database is created the Mongo endpoint can still be settling and
+    # create_user_creds returns gRPC ABORTED. Retry with backoff until it's ready.
+    import time
+    from google.api_core import exceptions as gcp_exceptions
+    delays = [5, 10, 15, 20, 30]
+    for attempt in range(len(delays) + 1):
+        try:
+            response = client.create_user_creds(request)
+            return response.secure_password, response.resource_identity.principal
+        except gcp_exceptions.Aborted:
+            if attempt == len(delays):
+                raise
+            logger.warning(
+                f"create_user_creds ABORTED for {database_id} "
+                f"(attempt {attempt + 1}/{len(delays) + 1}); retrying in {delays[attempt]}s"
+            )
+            time.sleep(delays[attempt])
 
 
 def gcp_firestore_grant_db_role(principal: str, database_id: str, credentials=None) -> None:
