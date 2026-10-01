@@ -58,7 +58,7 @@ npm run test:tz:jest      # tz_test.ts only (TZ unit + integration)
 All backend commands run from `backend/`:
 ```
 poetry install
-poetry run uvicorn instacrud.main:app --reload  # dev server on :8000
+poetry run uvicorn instacrud.app:app --reload  # dev server on :8000
 poetry run python -c "..."  # one-off scripts
 ```
 
@@ -120,7 +120,7 @@ Port 3002 is used to avoid colliding with the frontend on port 3000.
 ### Typical dev setup
 
 Both servers run simultaneously in hot-reload mode:
-- **Backend:** from `backend/` — `poetry run uvicorn instacrud.main:app --reload` (port 8000)
+- **Backend:** from `backend/` — `poetry run uvicorn instacrud.app:app --reload` (port 8000)
 - **Frontend:** `npm run dev` (port 3000)
 - **Docs:** `cd docs && npm start -- --host 0.0.0.0 --port 3002` (port 3002)
 
