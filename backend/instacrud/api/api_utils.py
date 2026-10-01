@@ -57,6 +57,14 @@ PUBLIC_PATHS = {
     "/api/v1/resetPassword",
 }
 
+# Authenticated endpoints that read only system data (User/Organization/Tier) and must NOT
+# require the org database. Skipping the org-DB switch keeps them working while an org is still
+# provisioning or briefly unreachable — critical for /me, which the provisioning guard polls.
+SYSTEM_ONLY_PATHS = {
+    "/api/v1/me",
+    "/api/v1/me/organization",
+}
+
 # --- Helper: Role-based access control ---
 def role_required(*allowed_roles: Role):
     async def role_checker():

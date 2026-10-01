@@ -19,6 +19,7 @@ from instacrud.api.api_utils import (
     CORS_ALLOW_METHODS,
     CORS_ALLOW_HEADERS,
     PUBLIC_PATHS,
+    SYSTEM_ONLY_PATHS,
     SECRET_KEY,
     ALGORITHM,
 )
@@ -186,7 +187,11 @@ class DBInitMiddleware:
             organization_id = str(user.organization_id) if user.organization_id else None
 
             # Initialize database context
-            if role != Role.ADMIN:
+            if path in SYSTEM_ONLY_PATHS:
+                # Reads only system data — skip the org-DB switch so it works even
+                # while the org DB is still provisioning or briefly unreachable.
+                pass
+            elif role != Role.ADMIN:
                 if not organization_id:
                     response = JSONResponse(
                         status_code=401,

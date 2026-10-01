@@ -213,3 +213,46 @@ async def test_me_organization_endpoints(http_client: httpx.AsyncClient, clean_d
     finally:
         await delete_users(user_id, org_admin_id, admin_user.id)
         await delete_org(org_id)
+
+
+@pytest.mark.asyncio
+async def test_me_does_not_require_org_db(http_client: httpx.AsyncClient, clean_db, test_mode):
+    """/me must work even when the org DB is unreachable (e.g. the org is still provisioning),
+    while org-data endpoints still go through the org-DB switch."""
+    from unittest.mock import patch, AsyncMock
+    from fastapi import HTTPException
+    import instacrud.api.middleware as mw
+
+    pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    admin = User(email=f"me2_admin_{_TS}@test.com", hashed_password=pwd.hash("adminpass1"),
+                 name="Me2 Admin", role=Role.ADMIN)
+    await admin.insert()
+    org_id = user_id = None
+    try:
+        r = await http_client.post("/api/v1/signin", json={"email": admin.email, "password": "adminpass1"})
+        ah = {"Authorization": "Bearer " + r.json()["access_token"]}
+        code = f"me2_org_{_TS}"
+        r = await http_client.post("/api/v1/admin/organizations", json={"code": code, "name": f"Me2 {_TS}"}, headers=ah)
+        assert r.status_code == 200, r.text
+        org = await Organization.find_one(Organization.code == code)
+        org_id = str(org.id)
+        r = await http_client.post("/api/v1/admin/add_user", json={
+            "email": f"me2_user_{_TS}@test.com", "password": "userpass1",
+            "name": "Me2 User", "role": "USER", "organization_id": org_id}, headers=ah)
+        assert r.status_code == 200, r.text
+        user_id = (await User.find_one({"email": f"me2_user_{_TS}@test.com", "organization_id": org.id})).id
+        await wait_for_org_active(http_client, org_id, ah)
+        r = await http_client.post("/api/v1/signin", json={"email": f"me2_user_{_TS}@test.com", "password": "userpass1"})
+        uh = {"Authorization": "Bearer " + r.json()["access_token"]}
+
+        # Simulate the org DB being unreachable, exactly as during provisioning.
+        with patch.object(mw, "switch_to_org_db",
+                          AsyncMock(side_effect=HTTPException(status_code=400, detail="provisioning"))):
+            me = await http_client.get("/api/v1/me", headers=uh)
+            assert me.status_code == 200, f"/me must not depend on the org DB: {me.status_code} {me.text}"
+            # An org-data endpoint still requires the switch, so it fails while unreachable.
+            cl = await http_client.get("/api/v1/clients", headers=uh)
+            assert cl.status_code != 200, "org-data endpoints must still switch to the org DB"
+    finally:
+        await delete_users(user_id, admin.id)
+        await delete_org(org_id)
