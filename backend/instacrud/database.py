@@ -186,25 +186,36 @@ class DatabaseManager:
             # Ensure models are patched
             self._patch_org_models()
 
-            # Create connection
-            if mongo_url:
-                client = AsyncIOMotorClient(mongo_url, **_tls_kwargs)
-                db = client.get_default_database()
-                self._clients[db_id] = client
-            else:
-                db = _client_instance.get_database(db_id)
-
-            # Test connectivity
-            try:
-                test_client = self._clients.get(db_id, _client_instance)
-                await asyncio.wait_for(
-                    test_client.admin.command('ping'),
-                    timeout=self.HEALTH_CHECK_TIMEOUT_SECONDS
-                )
-            except Exception as e:
-                # Clean up partial state on failure
-                self._clients.pop(db_id, None)
-                raise ValueError(f"Cannot connect to database {db_id}: {e}")
+            # Create + verify the connection. For an org DB (mongo_url set), retry transient
+            # failures: a freshly provisioned Firestore DB's SCRAM creds propagate unevenly across
+            # loadBalanced nodes, so a connect can hit a node that still returns "Invalid password".
+            # The pre-provision IAM probe uses different connections and can't vouch for this one.
+            connect_delays = [2, 4, 8, 15] if mongo_url else []
+            for attempt in range(len(connect_delays) + 1):
+                if mongo_url:
+                    client = AsyncIOMotorClient(mongo_url, **_tls_kwargs)
+                    db = client.get_default_database()
+                    self._clients[db_id] = client
+                else:
+                    db = _client_instance.get_database(db_id)
+                try:
+                    test_client = self._clients.get(db_id, _client_instance)
+                    await asyncio.wait_for(
+                        test_client.admin.command('ping'),
+                        timeout=self.HEALTH_CHECK_TIMEOUT_SECONDS
+                    )
+                    break
+                except Exception as e:
+                    # Clean up partial state before retrying or giving up
+                    self._clients.pop(db_id, None)
+                    if attempt < len(connect_delays):
+                        logger.warning(
+                            f"Connect to '{db_id}' failed (attempt {attempt + 1}/"
+                            f"{len(connect_delays) + 1}): {e}; retrying in {connect_delays[attempt]}s"
+                        )
+                        await asyncio.sleep(connect_delays[attempt])
+                        continue
+                    raise ValueError(f"Cannot connect to database {db_id}: {e}")
 
             self._databases[db_id] = db
             self._last_access[db_id] = time.monotonic()
@@ -502,7 +513,9 @@ async def create_firestore_org_db(organization_id: str) -> str:
 
     db_id = org_to_firestore_id(organization_id)
     try:
-        gcp_firestore_create_database(db_id)
+        # Blocking gRPC (waits on the create operation) — run off the event loop.
+        import anyio
+        await anyio.to_thread.run_sync(gcp_firestore_create_database, db_id)
         # Collections are created automatically on first write via Beanie/MongoDB endpoint.
         # No need to use Firestore API (which may be disabled).
         return organization_id

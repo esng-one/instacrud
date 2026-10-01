@@ -20,9 +20,12 @@ async def provision_organization_task(
             return
 
         if firestore_mode:
+            import anyio
             logger.info(f"Creating firestore DB for org={organization_id}")
             await db.create_firestore_org_db(organization_id)
-            mongo_url = db.assign_firestore_org_db(organization_id)
+            # Blocking gRPC + ABORTED-retry sleeps — run off the event loop so it can't
+            # stall other requests (e.g. the /me polls the provisioning guard makes).
+            mongo_url = await anyio.to_thread.run_sync(db.assign_firestore_org_db, organization_id)
             org.mongo_url = encrypt_connection_url(mongo_url)
             await org.save()
             
