@@ -99,7 +99,7 @@ _INJECTION_PATTERNS: list[re.Pattern] = [
     ),
 ]
 
-_MAX_SCAN_DEPTH = 5  # prevent pathological nesting
+_MAX_SCAN_DEPTH = 10  # prevent pathological nesting (matches the filter parser's limit)
 
 
 def _check_prompt_injection(text: str, field_name: str = "input") -> None:
@@ -115,7 +115,7 @@ def _check_prompt_injection(text: str, field_name: str = "input") -> None:
 def _scan_data_for_injection(data: Any, field_name: str = "data", _depth: int = 0) -> None:
     """Recursively walk *data* and call _check_prompt_injection on every string."""
     if _depth > _MAX_SCAN_DEPTH:
-        return
+        raise ValueError(f"Payload nested too deeply (>{_MAX_SCAN_DEPTH}) in field {field_name!r}; refusing to scan")
     if isinstance(data, str):
         _check_prompt_injection(data, field_name)
     elif isinstance(data, dict):
@@ -138,7 +138,7 @@ _NOSQL_OP_KEY_RE = re.compile(r'^\$')
 def _scan_for_nosql_data_keys(data: Any, field_name: str = "data", _depth: int = 0) -> None:
     """Raise ValueError if any write-payload dict key is a MongoDB operator ($-prefixed)."""
     if _depth > _MAX_SCAN_DEPTH:
-        return
+        raise ValueError(f"Payload nested too deeply (>{_MAX_SCAN_DEPTH}) in field {field_name!r}; refusing to scan")
     if isinstance(data, dict):
         for key, value in data.items():
             if isinstance(key, str) and _NOSQL_OP_KEY_RE.match(key):
@@ -160,7 +160,7 @@ def _scan_for_xss_and_sql(
 ) -> None:
     """Recursively scan string values for XSS payloads."""
     if _depth > _MAX_SCAN_DEPTH:
-        return
+        raise ValueError(f"Payload nested too deeply (>{_MAX_SCAN_DEPTH}) in field {field_name!r}; refusing to scan")
     if isinstance(data, str):
         if check_xss and _XSS_RE.search(data):
             raise ValueError(f"XSS payload detected in field {field_name!r}.")
@@ -465,6 +465,43 @@ def _check_system_access(model_name: str) -> None:
     )
 
 
+# Models owned by a single user. The REST factory scopes these with userScoped=True;
+# the generic tools must enforce the same ownership or one user can reach another's rows.
+_USER_SCOPED_MODELS: frozenset[str] = frozenset({"Conversation"})
+
+
+def _scope_user_query(model_name: str, query: dict) -> dict:
+    """For a user-scoped model, AND the caller's user_id into the query (bypass-proof)."""
+    if model_name not in _USER_SCOPED_MODELS:
+        return query
+    ctx = current_user_context.get()
+    if not ctx or not ctx.user_id:
+        raise ValueError("Not authenticated")
+    if query:
+        return {"$and": [query, {"user_id": ctx.user_id}]}
+    return {"user_id": ctx.user_id}
+
+
+def _require_owns(model_name: str, doc, item_id: str) -> None:
+    """For a user-scoped model, raise (as not-found) unless the caller owns the doc."""
+    if model_name not in _USER_SCOPED_MODELS:
+        return
+    ctx = current_user_context.get()
+    if not ctx or not ctx.user_id or getattr(doc, "user_id", None) != ctx.user_id:
+        # Not-found, not forbidden — don't reveal that another user's row exists.
+        raise ValueError(f"{model_name} with id={item_id!r} not found")
+
+
+def _force_user_owner(model_name: str, data: dict) -> None:
+    """For a user-scoped model, pin user_id to the caller (ignore any supplied value)."""
+    if model_name not in _USER_SCOPED_MODELS:
+        return
+    ctx = current_user_context.get()
+    if not ctx or not ctx.user_id:
+        raise ValueError("Not authenticated")
+    data["user_id"] = ctx.user_id
+
+
 async def _validate_fk(model, data: dict) -> None:
     """Run FK reference checks, translating HTTPException to ValueError."""
     try:
@@ -572,6 +609,7 @@ async def crud_list(
     model = _require_model(model_name)
     query = _parse_filters_arg(filters)
     _validate_filter_values(query)
+    query = _scope_user_query(model_name, query)
     limit = max(1, min(limit, 500))
     docs = await model.find(query).sort(sort).skip(skip).limit(limit).to_list()
     results = [_doc_to_dict(d) for d in docs]
@@ -608,6 +646,7 @@ async def crud_get(
     doc = await model.get(item_id)
     if doc is None:
         raise ValueError(f"{model_name} with id={item_id!r} not found")
+    _require_owns(model_name, doc, item_id)
     result = _doc_to_dict(doc)
     if exclude_fields:
         _strip_fields(result, exclude_fields)
@@ -633,6 +672,7 @@ async def crud_create(model_name: str, data: dict[str, Any]) -> dict[str, Any]:
     """
     model = _require_model(model_name)
     data = _normalize_fk_values({k: v for k, v in data.items() if k not in IMMUTABLE_FIELDS})
+    _force_user_owner(model_name, data)
     await _validate_fk(model, data)
     try:
         doc = model(**data)
@@ -666,7 +706,10 @@ async def crud_update(model_name: str, item_id: str, data: dict[str, Any]) -> di
     doc = await model.get(item_id)
     if doc is None:
         raise ValueError(f"{model_name} with id={item_id!r} not found")
+    _require_owns(model_name, doc, item_id)
     safe = _normalize_fk_values({k: v for k, v in data.items() if k not in IMMUTABLE_FIELDS})
+    if model_name in _USER_SCOPED_MODELS:
+        safe.pop("user_id", None)
     await _validate_fk(model, safe)
     try:
         await doc.update(Set(safe))
@@ -700,7 +743,10 @@ async def crud_patch(model_name: str, item_id: str, data: dict[str, Any]) -> dic
     doc = await model.get(item_id)
     if doc is None:
         raise ValueError(f"{model_name} with id={item_id!r} not found")
+    _require_owns(model_name, doc, item_id)
     safe = _normalize_fk_values({k: v for k, v in data.items() if k not in IMMUTABLE_FIELDS})
+    if model_name in _USER_SCOPED_MODELS:
+        safe.pop("user_id", None)
     await _validate_fk(model, safe)
     try:
         await doc.update(Set(safe))
@@ -730,6 +776,7 @@ async def crud_delete(model_name: str, item_id: str) -> dict[str, Any]:
     doc = await model.get(item_id)
     if doc is None:
         raise ValueError(f"{model_name} with id={item_id!r} not found")
+    _require_owns(model_name, doc, item_id)
     await doc.delete()
     return {"deleted": True, "id": item_id}
 

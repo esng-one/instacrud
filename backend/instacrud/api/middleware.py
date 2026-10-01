@@ -265,7 +265,15 @@ def register_middlewares(app):
             )
         return response
 
-    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+    # Only trust X-Forwarded-For from configured proxies; otherwise the rate-limit
+    # key (client IP) is spoofable — a fresh bucket per request.
+    trusted_proxies = [h.strip() for h in settings.TRUSTED_PROXIES.split(",") if h.strip()]
+    if settings.MODE == "prod" and "*" in trusted_proxies:
+        logger.warning(
+            "TRUSTED_PROXIES='*' in prod: X-Forwarded-For is spoofable and IP rate limits "
+            "can be bypassed. Set TRUSTED_PROXIES to your load balancer's address."
+        )
+    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=trusted_proxies or "127.0.0.1")
 
     # SessionMiddleware must come before any middleware accessing request.session
     app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)

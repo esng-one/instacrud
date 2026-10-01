@@ -43,6 +43,10 @@ class AppSettings(BaseSettings):
     GCP_FIREBASE_SA_JSON: Optional[str] = None  # only needed when AUTH_TYPE=JSON
     GCP_PROJECT_ID: Optional[str] = None
 
+    # Immediate proxy IPs allowed to set X-Forwarded-For (for the real client IP / rate-limit key).
+    # Comma-separated; "*" trusts any peer and lets clients spoof their rate-limit bucket — never use it in prod.
+    TRUSTED_PROXIES: str = "127.0.0.1"
+
     # === CORS ===
     CORS_ALLOW_ORIGINS: str = "*"
     CORS_ALLOW_CREDENTIALS: bool = False

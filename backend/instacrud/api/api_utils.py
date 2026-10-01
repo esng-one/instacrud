@@ -3,6 +3,7 @@ import re
 from datetime import datetime, timezone
 from typing import Type, TypeVar, List, Optional, Any
 from bson import ObjectId
+from bson.errors import InvalidId
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
@@ -162,10 +163,13 @@ def _convert_value(field: str, value: Any):
         except ValueError:
             raise HTTPException(400, f"Invalid UUID format for {field}: {value}")
     # Handle ObjectId fields
-    if (field in ("_id", "id") or field.endswith("_id")) and isinstance(value, str):
-        return PydanticObjectId(value)
-    if field.endswith("_ids") and isinstance(value, list):
-        return [PydanticObjectId(v) for v in value if v]
+    try:
+        if (field in ("_id", "id") or field.endswith("_id")) and isinstance(value, str):
+            return PydanticObjectId(value)
+        if field.endswith("_ids") and isinstance(value, list):
+            return [PydanticObjectId(v) for v in value if v]
+    except (InvalidId, ValueError, TypeError):
+        raise HTTPException(400, f"Invalid id format for {field}: {value}")
     return value
 
 
