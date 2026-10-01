@@ -8,10 +8,8 @@ from instacrud.mailer.email_service import EmailService
 
 
 def safe_filename(value: str) -> str:
-    """Make a string safe for use as a filename on all OSes."""
-    value = value.lower()
-    value = re.sub(r'[<>:"/\\|?*]', "_", value)
-    return value
+    """Make a string safe for use as a filename on all OSes (letters, digits, '_' and '-' only)."""
+    return re.sub(r"[^a-z0-9_-]", "_", value.lower())
 
 
 class FileEmailService(EmailService):
@@ -23,8 +21,15 @@ class FileEmailService(EmailService):
     ):
         self.from_address = from_address
         self.from_name = from_name
-        self.out_dir = Path(out_dir)
+        self.out_dir = Path(out_dir).resolve()
         self.out_dir.mkdir(parents=True, exist_ok=True)
+
+    def _path(self, name: str) -> Path:
+        """Path for a dump file, guaranteed to stay inside out_dir."""
+        path = (self.out_dir / name).resolve()
+        if path.parent != self.out_dir:
+            raise ValueError(f"Refusing to write outside {self.out_dir}: {name}")
+        return path
 
     async def send_email(
         self,
@@ -34,14 +39,14 @@ class FileEmailService(EmailService):
         text_body: Optional[str] = None,
     ) -> bool:
         ts = datetime.utcnow().strftime("%Y%m%dT%H%M%S.%fZ")
-        safe_to = safe_filename(to).replace("@", "_at_").replace(".", "_")
+        safe_to = safe_filename(to.replace("@", "_at_"))
         base = f"{ts}-{safe_to}"
 
         try:
             # ----------------------------------------------------------
             # HTML (with optional header comment for readability)
             # ----------------------------------------------------------
-            html_path = self.out_dir / f"{base}.html"
+            html_path = self._path(f"{base}.html")
             html_with_header = (
                 "<!--\n"
                 f"From: {self.from_name} <{self.from_address}>\n"
@@ -57,7 +62,7 @@ class FileEmailService(EmailService):
             # Text (optional)
             # ----------------------------------------------------------
             if text_body:
-                txt_path = self.out_dir / f"{base}.txt"
+                txt_path = self._path(f"{base}.txt")
                 txt_path.write_text(text_body, encoding="utf-8")
 
             # ----------------------------------------------------------
@@ -72,7 +77,7 @@ class FileEmailService(EmailService):
                 "subject": subject,
                 "timestamp": ts,
             }
-            meta_path = self.out_dir / f"{base}.json"
+            meta_path = self._path(f"{base}.json")
             meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
             print(f"Dummy email written to {html_path}")

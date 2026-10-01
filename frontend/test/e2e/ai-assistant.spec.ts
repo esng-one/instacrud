@@ -274,11 +274,7 @@ baseTest.describe('Conversation Re-sync Merge Cases (API)', () => {
     await apiCtx.dispose();
   });
 
-  const makeUuid = () =>
-    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-    });
+  const makeUuid = () => crypto.randomUUID();
 
   const makeMsg = (content: string) => ({
     role: 'user',
