@@ -72,7 +72,6 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
     "@playwright/test": "^1.58.1",
     "@popperjs/core": "^2.11.8",
     "@svgr/webpack": "^8.1.0",
