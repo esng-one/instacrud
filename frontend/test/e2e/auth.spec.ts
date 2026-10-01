@@ -45,30 +45,16 @@ test.describe('Authentication E2E', () => {
     await page.goto('/signin');
     await page.waitForLoadState('domcontentloaded');
 
-    // Click sign up link if available
-    const signUpLink = page.locator('a[href*="signup"]').first();
-    const isVisible = await signUpLink.isVisible().catch(() => false);
-    if (isVisible) {
-      await signUpLink.click();
-      await expect(page).toHaveURL(/signup/);
-    } else {
-      test.skip();
-    }
+    await page.locator('a[href*="signup"]').first().click();
+    await expect(page).toHaveURL(/signup/);
   });
 
   test('should display forgot password page', async ({ page }) => {
     await page.goto('/signin');
     await page.waitForLoadState('domcontentloaded');
 
-    // Click forgot password link if available
-    const forgotPasswordLink = page.locator('a[href*="forgot"]').first();
-    const isVisible = await forgotPasswordLink.isVisible().catch(() => false);
-    if (isVisible) {
-      await forgotPasswordLink.click();
-      await expect(page).toHaveURL(/forgot/);
-    } else {
-      test.skip();
-    }
+    await page.locator('a[href*="forgot"]').first().click();
+    await expect(page).toHaveURL(/forgot/);
   });
 
   test('should handle sign in flow', async ({ page }) => {
