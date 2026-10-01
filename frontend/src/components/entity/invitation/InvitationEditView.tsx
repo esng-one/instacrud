@@ -44,7 +44,7 @@ export default function InvitationEditView({
   const formFields: { 
     label: string; 
     field: keyof InviteUserCreate; 
-    type: "text" | "select"; 
+    type: "text" | "email" | "select"; 
     options?: string[];
     render?: (value: string | number | boolean) => React.ReactNode;
     disabled?: boolean;
@@ -61,7 +61,7 @@ export default function InvitationEditView({
     }
 
     return [
-      { label: "Email", field: "email", type: "text" },
+      { label: "Email", field: "email", type: "email" },
       { 
         label: "Role", 
         field: "role", 

@@ -15,7 +15,7 @@ import TextArea from "@/components/form/input/TextArea";
 export type EditField<T, R = T> = {
   label: string;
   field: keyof T;
-  type: "text" | "textarea" | "select" | "reference" | "date" | "number" | "checkbox";
+  type: "text" | "email" | "textarea" | "select" | "reference" | "date" | "number" | "checkbox";
   options?: (string | number)[] | ReferenceOption<R>[];
   render?: (value: string | number | boolean, item: T) => React.ReactNode;
   loading?: boolean;
@@ -196,7 +196,7 @@ export function EntityEditView<T extends Record<string, unknown>, R = T>({
                     />
                   ) : (
                     <Input
-                      type="text"
+                      type={type === "email" ? "email" : "text"}
                       value={String(value ?? "")}
                       onChange={(e) =>
                         setItem({ ...item, [field]: e.target.value } as T)

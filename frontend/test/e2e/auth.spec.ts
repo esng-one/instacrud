@@ -119,43 +119,31 @@ test.describe('Authentication E2E', () => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
-    // Find and click sign out button
-    const signOutButton = page.locator('button:has-text("Sign Out"), a:has-text("Sign Out"), button:has-text("Logout"), a:has-text("Logout")').first();
-    const isVisible = await signOutButton.isVisible({ timeout: 5000 }).catch(() => false);
-    if (isVisible) {
-      await signOutButton.click();
+    // Sign out lives in the user dropdown; on mobile that sits behind the application menu
+    // Menus are toggles: only click what isn't open yet (early clicks can land before hydration)
+    await page.waitForLoadState('networkidle');
+    const userMenu = page.getByRole('button', { name: 'User menu' });
+    const signOut = page.getByRole('button', { name: 'Sign out' });
+    await expect(async () => {
+      if (await signOut.isVisible()) return;
+      if (!(await userMenu.isVisible())) await page.getByRole('button', { name: 'Application menu' }).click();
+      await userMenu.click();
+      await expect(signOut).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 20000 });
+    await signOut.click();
 
-      // Should redirect to sign in page
-      await page.waitForURL(/\/signin/, { timeout: 5000 });
-      await expect(page).toHaveURL(/signin/);
-    } else {
-      test.skip();
-    }
+    await page.waitForURL(/\/signin/, { timeout: 10000 });
+    await expect(page).toHaveURL(/signin/);
   });
 });
 
 test.describe('Protected Routes', () => {
   test('should redirect to sign in when accessing protected page without auth', async ({ page }) => {
-    // Try multiple potentially protected routes
-    const protectedRoutes = ['/users', '/organizations', '/settings', '/dashboard'];
-
-    for (const route of protectedRoutes) {
-      await page.goto(route);
-      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-      const url = page.url();
-
-      // Check if redirected to signin or shows signin form
-      const isOnSigninPage = url.includes('/signin');
-      const hasSigninForm = await page.locator('input[type="email"]').first().isVisible({ timeout: 2000 }).catch(() => false);
-
-      if (isOnSigninPage || hasSigninForm) {
-        expect(isOnSigninPage || hasSigninForm).toBeTruthy();
-        return; // Test passes if any route is protected
-      }
+    for (const route of ['/users', '/organizations', '/projects']) {
+      // The app's own redirect can interrupt goto; the URL check below is what matters
+      await page.goto(route).catch(() => {});
+      await expect(page).toHaveURL(/\/signin/, { timeout: 15000 });
     }
-
-    // If no routes are protected, skip (app might not have auth guards yet)
-    test.skip();
   });
 
   test('should allow access to protected pages when authenticated', async ({ adminAuthenticatedPage: page }) => {

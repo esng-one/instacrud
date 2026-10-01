@@ -6,7 +6,7 @@ import { applyRequiredFlags } from "@/app/lib/type-utils";
 const baseFields = [
   { label: "Name", field: "name", type: "text" },
   { label: "Title", field: "title", type: "text" },
-  { label: "Email", field: "email", type: "text" },
+  { label: "Email", field: "email", type: "email" },
   { label: "Phone", field: "phone", type: "text" },
 ] as const;
 

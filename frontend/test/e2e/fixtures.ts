@@ -25,12 +25,14 @@ async function waitAndFillSignInForm(page: any, email: string, password: string)
   await page.locator('input[type="password"]').clear();
   await page.fill('input[type="password"]', password);
 
-  // Wait for form to be ready
+  // Wait for form to be ready; a late hydration can wipe the typed values
   await page.waitForTimeout(300);
+  await expect(page.locator('input[type="email"]')).toHaveValue(email, { timeout: 2000 });
+  await expect(page.locator('input[type="password"]')).toHaveValue(password, { timeout: 2000 });
 }
 
 // Helper function to perform sign in via UI
-async function signInViaUI(page: any, email: string, password: string) {
+export async function signInViaUI(page: any, email: string, password: string) {
   const maxRetries = 3;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -60,39 +62,58 @@ async function signInViaUI(page: any, email: string, password: string) {
   }
 }
 
+const API = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1`;
+const ENTITY_POST = /\/api\/v1\/(clients|projects|contacts|documents|addresses|conversations)\/?(\?.*)?$/;
+
+// Records the id of every entity the page creates, so it can be deleted after the test
+function trackCreated(page: Page): Promise<string | null>[] {
+  const created: Promise<string | null>[] = [];
+  page.on('response', (r) => {
+    const m = r.url().match(ENTITY_POST);
+    if (!m || r.request().method() !== 'POST' || !r.ok()) return;
+    created.push(r.json().then((b) => (b?._id ? `${m[1]}/${b._id}` : null)).catch(() => null));
+  });
+  return created;
+}
+
+async function deleteCreated(pending: Promise<string | null>[], email: string, password: string) {
+  const created = (await Promise.all(pending)).filter((p): p is string => !!p);
+  if (!created.length) return;
+  const r = await fetch(`${API}/signin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const headers = { Authorization: `Bearer ${(await r.json()).access_token}` };
+  for (const path of created.reverse()) {
+    await fetch(`${API}/${path}`, { method: 'DELETE', headers }).catch(() => {});
+  }
+}
+
+async function authedPage(browser: Browser, run: (page: Page) => Promise<void>, email: string, password: string) {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const created = trackCreated(page);
+  await signInViaUI(page, email, password);
+  try {
+    await run(page);
+  } finally {
+    await deleteCreated(created, email, password);
+    await context.close();
+  }
+}
+
 // Extend base test with authenticated fixtures
 export const test = base.extend<AuthFixtures>({
-  // Authenticated page fixture - logs in as east_admin user
-  // This can be used for testing regular user permissions vs admin
+  // Logs in as east_admin (non-super-admin user)
   authenticatedPage: async ({ browser }: { browser: Browser }, use: (page: Page) => Promise<void>) => {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
-    // Sign in via UI as east_admin (non-super-admin user)
-    // Falls back to admin if east_admin doesn't exist
     const credentials = TEST_CREDENTIALS.east_admin || TEST_CREDENTIALS.admin;
-    await signInViaUI(page, credentials.email, credentials.password);
-
-    // Use the authenticated page
-    await use(page);
-
-    // Cleanup
-    await context.close();
+    await authedPage(browser, use, credentials.email, credentials.password);
   },
 
-  // Admin authenticated page fixture - logs in as super admin
+  // Logs in as super admin
   adminAuthenticatedPage: async ({ browser }: { browser: Browser }, use: (page: Page) => Promise<void>) => {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
-    // Sign in as admin via UI
-    await signInViaUI(page, TEST_CREDENTIALS.admin.email, TEST_CREDENTIALS.admin.password);
-
-    // Use the authenticated page
-    await use(page);
-
-    // Cleanup
-    await context.close();
+    await authedPage(browser, use, TEST_CREDENTIALS.admin.email, TEST_CREDENTIALS.admin.password);
   },
 });
 

@@ -20,11 +20,14 @@
 
 import { test, expect } from '@playwright/test';
 import { TEST_CREDENTIALS } from '../config';
+import { deleteOrg } from '../helpers';
+import { signInViaUI } from './fixtures';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const API = `${API_BASE}/api/v1`;
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
-const TS = Date.now();
+// Unique per worker: browser projects load this module in parallel
+const TS = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
 // ─── API helpers (no browser) ─────────────────────────────────────────────────
 
@@ -42,15 +45,20 @@ function authH(token: string): Record<string, string> {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 }
 
-async function signInViaUI(page: any, email: string, password: string): Promise<void> {
-  await page.goto(`${BASE_URL}/signin`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await page.waitForSelector('input[type="email"]', { state: 'visible', timeout: 15000 });
-  await page.fill('input[type="email"]', email);
-  await page.fill('input[type="password"]', password);
-  await page.click('button[type="submit"]');
-  await page.waitForURL((url: URL) => !url.pathname.includes('/signin'), { timeout: 30000 });
-  await page.waitForLoadState('domcontentloaded');
+// Retry: the click can land before flatpickr is initialized on a fresh modal
+async function openPicker(page: any, selector: string): Promise<void> {
+  await expect(async () => {
+    await page.click(selector);
+    await expect(page.locator('.flatpickr-calendar.open')).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 15000 });
 }
+
+// Show March 2026 in the open end_date picker without depending on today's date
+async function showMarch2026(page: any): Promise<void> {
+  await page.evaluate(() => (document.getElementById('end_date') as any)._flatpickr.jumpToDate(new Date(2026, 2, 1)));
+  await expect(page.locator('.flatpickr-calendar.open .cur-month')).toHaveText(/March/);
+}
+
 
 // ─── Shared state (populated in beforeAll) ────────────────────────────────────
 
@@ -116,11 +124,7 @@ test.describe.serial('TZ: date display and date picker', () => {
 
   // Delete org (cascades to user + project + client)
   test.afterAll(async () => {
-    if (orgId && adminToken) {
-      await fetch(`${API}/admin/organizations/${orgId}`, {
-        method: 'DELETE', headers: authH(adminToken),
-      });
-    }
+    if (orgId && adminToken) await deleteOrg(adminToken, orgId);
   });
 
   // ─── 1. Detail view: date not shifted ──────────────────────────────────────
@@ -201,24 +205,9 @@ test.describe.serial('TZ: date display and date picker', () => {
       await page.waitForSelector('#end_date', { state: 'visible', timeout: 10000 });
 
       // Click the end_date input to open flatpickr (click bubbles to parent onClick handler)
-      await page.click('#end_date');
-      await page.waitForSelector('.flatpickr-calendar.open', { state: 'visible', timeout: 5000 });
+      await openPicker(page, '#end_date');
 
-      // Navigate calendar to March 2026 (today is 2026-03-14, so we start in March 2026 already)
-      const monthNames = ['January','February','March','April','May','June',
-                          'July','August','September','October','November','December'];
-      for (let i = 0; i < 24; i++) {
-        const month = (await page.locator('.flatpickr-calendar.open .cur-month').textContent()) ?? '';
-        const year  = (await page.locator('.flatpickr-calendar.open .cur-year').inputValue()) ?? '0';
-        if (month.includes('March') && year === '2026') break;
-        const mIdx = monthNames.findIndex(m => month.includes(m));
-        const y = parseInt(year);
-        if (y > 2026 || (y === 2026 && mIdx > 2)) {
-          await page.locator('.flatpickr-calendar.open .flatpickr-prev-month').click();
-        } else {
-          await page.locator('.flatpickr-calendar.open .flatpickr-next-month').click();
-        }
-      }
+      await showMarch2026(page);
 
       // Select March 20 (after start_date March 10 — valid range)
       // CSS :not() applied directly so we filter the element itself, not a descendant
@@ -338,24 +327,9 @@ test.describe.serial('TZ: date display and date picker', () => {
       await page.waitForSelector('#end_date', { state: 'visible', timeout: 10000 });
 
       // Pick end_date = March 1 (before start_date March 10)
-      await page.click('#end_date');
-      await page.waitForSelector('.flatpickr-calendar.open', { state: 'visible', timeout: 5000 });
+      await openPicker(page, '#end_date');
 
-      // Navigate to March 2026
-      const monthNames = ['January','February','March','April','May','June',
-                          'July','August','September','October','November','December'];
-      for (let i = 0; i < 24; i++) {
-        const month = (await page.locator('.flatpickr-calendar.open .cur-month').textContent()) ?? '';
-        const year  = (await page.locator('.flatpickr-calendar.open .cur-year').inputValue()) ?? '0';
-        if (month.includes('March') && year === '2026') break;
-        const mIdx = monthNames.findIndex(m => month.includes(m));
-        const y = parseInt(year);
-        if (y > 2026 || (y === 2026 && mIdx > 2)) {
-          await page.locator('.flatpickr-calendar.open .flatpickr-prev-month').click();
-        } else {
-          await page.locator('.flatpickr-calendar.open .flatpickr-next-month').click();
-        }
-      }
+      await showMarch2026(page);
 
       await page.locator('.flatpickr-calendar.open .flatpickr-day:not(.prevMonthDay):not(.nextMonthDay)')
         .filter({ hasText: /^1$/ })

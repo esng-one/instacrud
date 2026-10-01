@@ -62,7 +62,7 @@ export default function UserEditView({
     }
 
     return [
-      { label: "Email", field: "email", type: "text" },
+      { label: "Email", field: "email", type: "email" },
       { label: "Name", field: "name", type: "text" },
       { label: "Password", field: "password", type: "text" },
       {
