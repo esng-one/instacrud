@@ -1,12 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { signInViaUI } from './fixtures';
 
 test('calendar has no double scrollbar', async ({ page }) => {
-  await page.goto('/signin', { timeout: 30000 });
-  await page.waitForLoadState('networkidle', { timeout: 30000 });
-  await page.fill('input[type="email"], input[name="email"]', 'east_admin@test.org');
-  await page.fill('input[type="password"], input[name="password"]', 'eastpass');
-  await page.click('button[type="submit"]');
-  await page.waitForURL('**/', { timeout: 15000 });
+  await signInViaUI(page, 'east_admin@test.org', 'eastpass');
 
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/calendar', { timeout: 30000 });
@@ -33,12 +29,7 @@ test('calendar has no double scrollbar', async ({ page }) => {
 });
 
 test('calendar popover stays within viewport on right edge', async ({ page }) => {
-  await page.goto('/signin', { timeout: 30000 });
-  await page.waitForLoadState('networkidle', { timeout: 30000 });
-  await page.fill('input[type="email"], input[name="email"]', 'east_admin@test.org');
-  await page.fill('input[type="password"], input[name="password"]', 'eastpass');
-  await page.click('button[type="submit"]');
-  await page.waitForURL('**/', { timeout: 15000 });
+  await signInViaUI(page, 'east_admin@test.org', 'eastpass');
 
   await page.goto('/calendar', { timeout: 30000 });
   await page.waitForLoadState('networkidle', { timeout: 30000 });
