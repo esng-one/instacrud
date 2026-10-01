@@ -8,7 +8,7 @@
  *   npx playwright test test/e2e/auth.spec.ts
  */
 
-import { test, expect } from './fixtures';
+import { test, expect, signOutViaUI } from './fixtures';
 import { TEST_CREDENTIALS } from '../config';
 
 const TEST_EMAIL = TEST_CREDENTIALS.admin.email;
@@ -119,20 +119,7 @@ test.describe('Authentication E2E', () => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
-    // Sign out lives in the user dropdown; on mobile that sits behind the application menu
-    // Menus are toggles: only click what isn't open yet (early clicks can land before hydration)
-    await page.waitForLoadState('networkidle');
-    const userMenu = page.getByRole('button', { name: 'User menu' });
-    const signOut = page.getByRole('button', { name: 'Sign out' });
-    await expect(async () => {
-      if (await signOut.isVisible()) return;
-      if (!(await userMenu.isVisible())) await page.getByRole('button', { name: 'Application menu' }).click();
-      await userMenu.click();
-      await expect(signOut).toBeVisible({ timeout: 2000 });
-    }).toPass({ timeout: 20000 });
-    await signOut.click();
-
-    await page.waitForURL(/\/signin/, { timeout: 10000 });
+    await signOutViaUI(page);
     await expect(page).toHaveURL(/signin/);
   });
 });
@@ -140,7 +127,8 @@ test.describe('Authentication E2E', () => {
 test.describe('Protected Routes', () => {
   test('should redirect to sign in when accessing protected page without auth', async ({ page }) => {
     for (const route of ['/users', '/organizations', '/projects']) {
-      // The app's own redirect can interrupt goto; the URL check below is what matters
+      // Leave /signin first so each route is really visited; the redirect can interrupt goto
+      await page.goto('about:blank');
       await page.goto(route).catch(() => {});
       await expect(page).toHaveURL(/\/signin/, { timeout: 15000 });
     }

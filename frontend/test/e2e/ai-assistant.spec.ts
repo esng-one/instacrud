@@ -135,34 +135,30 @@ test.describe('AI Assistant E2E', () => {
   });
 
   test('should allow deleting a conversation', async ({ authenticatedPage: page }) => {
-    await page.goto(`/ai-assistant`);
-    await page.waitForLoadState('load');
+    // Seed one conversation of our own, then delete exactly that one through the UI
+    const api = `${TEST_CONFIG.getApiUrl()}/api/v1`;
+    const token = await page.evaluate(() => localStorage.getItem('token') ?? sessionStorage.getItem('token'));
+    const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+    const title = `Delete me ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const created = await (await fetch(`${api}/conversations`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ title, messages: [], last_message_at: new Date().toISOString() }),
+    })).json();
 
-    // Look for delete or trash button
-    const deleteButton = page.locator('button:has-text("Delete"), button[title*="Delete"]').first();
-    if (await deleteButton.isVisible()) {
-      // Create a new conversation first
-      const newButton = page.locator('button:has-text("New")').first();
-      if (await newButton.isVisible()) {
-        await newButton.click();
-        await page.waitForLoadState('load');
+    try {
+      await page.goto(`/ai-assistant`);
+      await page.waitForLoadState('networkidle');
+      await page.getByTitle('History').click();
 
-        // Now try to delete
-        const deleteBtn = page.locator('button:has-text("Delete"), [class*="delete"]').first();
-        if (await deleteBtn.isVisible()) {
-          await deleteBtn.click();
-          await page.waitForLoadState('load');
+      const row = page.locator('div', { has: page.getByRole('button', { name: title, exact: true }) }).last();
+      await row.getByTitle('Delete conversation').click();
 
-          // Confirm deletion if dialog appears
-          const confirmButton = page.locator('button:has-text("Confirm"), button:has-text("Yes")').first();
-          if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-            await confirmButton.click();
-          }
+      const confirm = page.locator('button:has-text("Confirm"), button:has-text("Yes"), button:has-text("Delete")').last();
+      if (await confirm.isVisible({ timeout: 2000 }).catch(() => false)) await confirm.click();
 
-          await page.waitForLoadState('load');
-          expect(true).toBe(true);
-        }
-      }
+      await expect.poll(async () => (await fetch(`${api}/conversations/${created._id}`, { headers })).status).toBe(404);
+    } finally {
+      await fetch(`${api}/conversations/${created._id}`, { method: 'DELETE', headers }).catch(() => {});
     }
   });
 

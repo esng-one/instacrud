@@ -19,13 +19,6 @@ const TEST_USER_EMAIL = `user_${Date.now()}@test.com`;
 const TEST_RO_USER_EMAIL = `ro_user_${Date.now()}@test.com`;
 
 test.describe('Integration Lifecycle Tests', () => {
-  let createdOrgId: string | null = null;
-  let createdClientId: string | null = null;
-  let createdProjectId: string | null = null;
-
-  // Note: Cleanup is surgical - only deletes resources created in this test run
-  // Resources are tracked by their IDs and deleted in afterAll
-
   test('should complete full lifecycle workflow via UI', async ({ adminAuthenticatedPage: page }) => {
     test.setTimeout(120000); // 2 minutes for full flow
 
@@ -73,8 +66,7 @@ test.describe('Integration Lifecycle Tests', () => {
     await page.waitForLoadState('networkidle');
 
     // Admin should see action buttons
-    const hasActionButtons = await page.locator('button:has-text("New"), button:has-text("Edit"), button:has-text("Delete")').count();
-    expect(hasActionButtons).toBeGreaterThan(0);
+    await expect(page.locator('button:has-text("New"), button:has-text("Edit"), button:has-text("Delete")').first()).toBeVisible();
   });
 
   test('should allow navigation through breadcrumbs', async ({ adminAuthenticatedPage: page }) => {
@@ -88,73 +80,6 @@ test.describe('Integration Lifecycle Tests', () => {
     }
   });
 
-  // Cleanup
-  test.afterAll(async ({ adminAuthenticatedPage: page }) => {
-    // Delete created resources via UI
-    if (createdProjectId) {
-      try {
-        await page.goto(`/projects?id=${createdProjectId}`);
-        await page.waitForLoadState('networkidle');
-
-        const deleteButton = page.locator('button:has-text("Delete")').first();
-        if (await deleteButton.isVisible()) {
-          await deleteButton.click();
-          await page.waitForTimeout(500);
-
-          // Confirm deletion if there's a confirmation dialog
-          const confirmButton = page.locator('button:has-text("Confirm"), button:has-text("Yes"), button:has-text("Delete")').last();
-          if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-            await confirmButton.click();
-            await page.waitForLoadState('load');
-          }
-        }
-      } catch (error) {
-        console.error('Failed to delete project:', error);
-      }
-    }
-
-    if (createdClientId) {
-      try {
-        await page.goto(`/clients?id=${createdClientId}`);
-        await page.waitForLoadState('networkidle');
-
-        const deleteButton = page.locator('button:has-text("Delete")').first();
-        if (await deleteButton.isVisible()) {
-          await deleteButton.click();
-          await page.waitForTimeout(500);
-
-          const confirmButton = page.locator('button:has-text("Confirm"), button:has-text("Yes"), button:has-text("Delete")').last();
-          if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-            await confirmButton.click();
-            await page.waitForLoadState('load');
-          }
-        }
-      } catch (error) {
-        console.error('Failed to delete client:', error);
-      }
-    }
-
-    if (createdOrgId) {
-      try {
-        await page.goto(`/organizations?id=${createdOrgId}`);
-        await page.waitForLoadState('networkidle');
-
-        const deleteButton = page.locator('button:has-text("Delete")').first();
-        if (await deleteButton.isVisible()) {
-          await deleteButton.click();
-          await page.waitForTimeout(500);
-
-          const confirmButton = page.locator('button:has-text("Confirm"), button:has-text("Yes"), button:has-text("Delete")').last();
-          if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-            await confirmButton.click();
-            await page.waitForLoadState('load');
-          }
-        }
-      } catch (error) {
-        console.error('Failed to delete organization:', error);
-      }
-    }
-  });
 });
 
 test.describe('Authentication Flows via UI', () => {

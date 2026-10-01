@@ -57,6 +57,7 @@ async function openPicker(page: any, selector: string): Promise<void> {
 async function showMarch2026(page: any): Promise<void> {
   await page.evaluate(() => (document.getElementById('end_date') as any)._flatpickr.jumpToDate(new Date(2026, 2, 1)));
   await expect(page.locator('.flatpickr-calendar.open .cur-month')).toHaveText(/March/);
+  await expect(page.locator('.flatpickr-calendar.open .cur-year')).toHaveValue('2026');
 }
 
 

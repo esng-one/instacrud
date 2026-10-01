@@ -91,7 +91,9 @@ export function createAuthHeaders(token: string): HeadersInit {
 export async function deleteOrg(adminToken: string, orgId: string): Promise<void> {
   const url = `${getApiUrl()}/admin/organizations/${orgId}`;
   const headers = createAuthHeaders(adminToken);
-  const { org_name_hash } = await (await fetch(url, { method: 'DELETE', headers })).json();
+  const first = await fetch(url, { method: 'DELETE', headers });
+  if (!first.ok) throw new Error(`delete org ${orgId} failed: ${first.status} ${await first.text()}`);
+  const { org_name_hash } = await first.json();
   const resp = await fetch(`${url}?confirm_hash=${org_name_hash}`, { method: 'DELETE', headers });
   if (!resp.ok) throw new Error(`delete org ${orgId} failed: ${resp.status} ${await resp.text()}`);
 }
