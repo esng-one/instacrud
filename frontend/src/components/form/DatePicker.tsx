@@ -7,6 +7,9 @@ import { InputAdornment, TextField, IconButton } from "@mui/material";
 import Hook = flatpickr.Options.Hook;
 import DateOption = flatpickr.Options.DateOption;
 
+// Calendar date at local noon, so no timezone can shift the day
+const toNoon = (value: string) => new Date(`${String(value).split("T")[0]}T12:00:00`);
+
 type PropsType = {
   id: string;
   value?: string | null;
@@ -34,6 +37,15 @@ export default function DatePicker({
   required = false,
 }: PropsType) {
   const fpRef = useRef<flatpickr.Instance | null>(null);
+  // Latest onChange/value without re-creating the picker (callers pass inline callbacks)
+  const onChangeRef = useRef(onChange);
+  const valueRef = useRef(value);
+
+  // Declared first so it runs before the picker is (re)created
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    valueRef.current = value;
+  });
 
   useEffect(() => {
     const inputEl = document.getElementById(id) as HTMLInputElement | null;
@@ -53,6 +65,7 @@ export default function DatePicker({
       appendTo: document.body,
       positionElement: inputEl,
       onChange: (selectedDates, dateStr, instance) => {
+        const onChange = onChangeRef.current;
         if (typeof onChange === "function") {
           onChange(selectedDates, dateStr, instance);
         } else if (Array.isArray(onChange)) {
@@ -70,17 +83,18 @@ export default function DatePicker({
     });
 
     fpRef.current = fp;
+    if (valueRef.current) fp.setDate(toNoon(valueRef.current), false);
     return () => {
       fp.destroy();
       fpRef.current = null;
     };
-  }, [id, mode, onChange]);
+  }, [id, mode]);
 
   // Keep picker synced with React value
   useEffect(() => {
     if (!fpRef.current) return;
     if (!value) fpRef.current.clear();
-    else fpRef.current.setDate(new Date(`${String(value).split("T")[0]}T12:00:00`), false);
+    else fpRef.current.setDate(toNoon(value), false);
   }, [value]);
 
   const handleClick = () => {
