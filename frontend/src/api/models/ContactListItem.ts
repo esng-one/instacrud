@@ -3,11 +3,17 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { PydanticObjectId } from './PydanticObjectId';
+/**
+ * Projection model for GET /contacts list — only fields rendered by ContactGrid.
+ *
+ * Intentionally omits: search_tokens (internal full-text index, never rendered).
+ */
 export type ContactListItem = {
-    _id?: PydanticObjectId;
-    updated_at?: string;
-    name?: string;
-    title?: string;
-    email?: string;
-    phone?: string;
+    updated_at?: (string | null);
+    _id?: (PydanticObjectId | null);
+    name?: (string | null);
+    title?: (string | null);
+    email?: (string | null);
+    phone?: (string | null);
 };
+

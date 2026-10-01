@@ -3,8 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { Client_Input } from '../models/Client_Input';
-import type { ClientListItem } from '../models/ClientListItem';
 import type { Client_Output } from '../models/Client_Output';
+import type { ClientListItem } from '../models/ClientListItem';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';

@@ -4,11 +4,18 @@
 /* eslint-disable */
 import type { ClientType } from './ClientType';
 import type { PydanticObjectId } from './PydanticObjectId';
+/**
+ * Projection model for GET /clients list — only fields rendered by ClientGrid.
+ *
+ * Intentionally omits: search_tokens (internal full-text index, never rendered),
+ * contact_ids, address_ids (ID arrays unused by the grid).
+ */
 export type ClientListItem = {
-    _id?: PydanticObjectId;
-    updated_at?: string;
-    code?: string;
-    name?: string;
-    type?: ClientType;
-    description?: string;
+    updated_at?: (string | null);
+    _id?: (PydanticObjectId | null);
+    code?: (string | null);
+    name?: (string | null);
+    type?: (ClientType | null);
+    description?: (string | null);
 };
+

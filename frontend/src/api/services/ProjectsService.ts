@@ -3,8 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { Project_Input } from '../models/Project_Input';
-import type { ProjectListItem } from '../models/ProjectListItem';
 import type { Project_Output } from '../models/Project_Output';
+import type { ProjectListItem } from '../models/ProjectListItem';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';

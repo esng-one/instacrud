@@ -3,12 +3,20 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { PydanticObjectId } from './PydanticObjectId';
+/**
+ * Projection model for GET /documents list — only fields rendered by DocumentGrid.
+ *
+ * Intentionally omits: search_tokens (internal full-text index, never rendered),
+ * content_embedding (1536-dim float array; not needed in list — heatmap only
+ * renders in expanded accordion, which can lazy-load from the detail endpoint).
+ */
 export type ProjectDocumentListItem = {
-    _id?: PydanticObjectId;
-    updated_at?: string;
-    project_id?: PydanticObjectId;
-    code?: string;
-    name?: string;
-    content?: string;
-    description?: string;
+    updated_at?: (string | null);
+    _id?: (PydanticObjectId | null);
+    project_id?: (PydanticObjectId | null);
+    code?: (string | null);
+    name?: (string | null);
+    content?: (string | null);
+    description?: (string | null);
 };
+

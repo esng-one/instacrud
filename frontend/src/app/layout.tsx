@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 
 import { SidebarProvider } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
+import ApiConfig from './ApiConfig';
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -39,6 +40,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className={`${outfit.className} dark:bg-gray-900`}>
+        <ApiConfig />
         <ThemeProvider>
           <SidebarProvider>{children}</SidebarProvider>
           <Toaster

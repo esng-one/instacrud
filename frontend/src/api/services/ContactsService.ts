@@ -3,8 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { Contact_Input } from '../models/Contact_Input';
-import type { ContactListItem } from '../models/ContactListItem';
 import type { Contact_Output } from '../models/Contact_Output';
+import type { ContactListItem } from '../models/ContactListItem';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
