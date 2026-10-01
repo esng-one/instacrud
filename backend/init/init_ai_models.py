@@ -232,7 +232,7 @@ AI_MODELS = [
         "image_generation": True,
         "reasoning": False,
         "enabled": True,
-        "rank": 80,
+        "rank": 20,
         "params": {
             "default_resolution": "1024x1024",
             "supported_resolutions": ["1024x1024", "1024x1536", "1536x1024"],

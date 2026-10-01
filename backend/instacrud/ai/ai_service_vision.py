@@ -53,7 +53,7 @@ class ImageGenerator(ABC):
 
 
 class OpenAIImageGenerator(ImageGenerator):
-    """Image generator for OpenAI (DALL-E and GPT-Image models)."""
+    """Image generator for OpenAI GPT Image models."""
 
     async def generate(
         self,
@@ -64,13 +64,9 @@ class OpenAIImageGenerator(ImageGenerator):
         response_format: Literal["url", "b64_json"],
         image_data: Optional[bytes]
     ) -> List[Any]:
-        client = AsyncOpenAI()
-        is_gpt_image = "gpt-image" in self.ai_model.model_identifier.lower()
-
-        if is_gpt_image:
-            return await self._generate_gpt_image(client, prompt, size, quality, n, response_format, image_data)
-        else:
-            return await self._generate_dalle(client, prompt, size, quality, n, response_format, image_data)
+        if "gpt-image" not in self.ai_model.model_identifier.lower():
+            raise ValueError(f"Unsupported OpenAI image model: {self.ai_model.model_identifier}")
+        return await self._generate_gpt_image(AsyncOpenAI(), prompt, size, quality, n, response_format, image_data)
 
     async def _generate_gpt_image(
         self,
@@ -106,30 +102,6 @@ class OpenAIImageGenerator(ImageGenerator):
                 quality=gpt_quality,
                 n=n,
             )
-
-        return await self._process_response(response, response_format)
-
-    async def _generate_dalle(
-        self,
-        client: AsyncOpenAI,
-        prompt: str,
-        size: str,
-        quality: str,
-        n: int,
-        response_format: Literal["url", "b64_json"],
-        image_data: Optional[bytes]
-    ) -> List[Any]:
-        if image_data:
-            raise ValueError(f"Model {self.ai_model.name} does not support image-to-image generation")
-
-        response = await client.images.generate(
-            model=self.ai_model.model_identifier,
-            prompt=prompt,
-            size=size,
-            quality=quality,
-            n=n,
-            response_format="b64_json"
-        )
 
         return await self._process_response(response, response_format)
 
