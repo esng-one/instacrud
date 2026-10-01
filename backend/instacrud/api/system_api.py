@@ -23,7 +23,7 @@ from instacrud.config import settings
 from instacrud.context import current_user_context
 from instacrud.crypto import encrypt_connection_url
 from instacrud.database import drop_org_db, ensure_search_indexes_for_org, init_org_db, assign_org_db, assign_firestore_org_db, use_org_db_mode, firestore_mode, create_firestore_org_db
-from instacrud.model.system_model import Organization, Role, User, Invitation, AiModel, Tier, PasswordResetToken
+from instacrud.model.system_model import Organization, Role, User, Invitation, AiModel, Tier, PasswordResetToken, Usage, UsageHistory
 from instacrud.mailer import get_email_service
 from instacrud.mailer.templates import render_invitation_email, render_password_reset_email
 
@@ -252,8 +252,12 @@ async def delete_organization(
     if confirm_hash != expected_hash:
         raise HTTPException(status_code=400, detail="Invalid confirmation hash")
 
+    user_ids = [u.id for u in await User.find({"organization_id": org.id}).to_list()]
+    await PasswordResetToken.find({"user_id": {"$in": user_ids}}).delete_many()
     await User.find({"organization_id": org.id}).delete_many()
     await Invitation.find({"organization_id": org.id}).delete_many()
+    await Usage.find({"organization_id": org.id}).delete_many()
+    await UsageHistory.find({"organization_id": org.id}).delete_many()
     await org.delete()
     await drop_org_db(str(org.id))
 
@@ -415,6 +419,7 @@ async def delete_user(
     if user_ctx.role == Role.ORG_ADMIN and str(user.organization_id) != user_ctx.organization_id:
         raise HTTPException(status_code=403, detail="Not authorized to delete this user")
 
+    await PasswordResetToken.find({"user_id": user.id}).delete_many()
     await user.delete()
     return MessageResponse(message="User deleted successfully")
 
