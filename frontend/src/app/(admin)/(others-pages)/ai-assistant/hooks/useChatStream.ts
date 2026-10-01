@@ -7,6 +7,7 @@ import type { LocalConversation, Message } from "@/db/conversationsDb";
 import { syncConversationToServer } from "../utils/serverSync";
 import { imageToBase64 } from "../utils/imageUtils";
 import { getToken } from "@/lib/tokenStorage";
+import { reportUnauthorized } from "@/lib/authFailure";
 
 interface UseChatStreamOptions {
   conversationId: string;
@@ -150,6 +151,7 @@ export function useChatStream({
       );
 
       if (!response.ok) {
+        if (response.status === 401) reportUnauthorized(response.url);
         const errorData = await response.json().catch(() => ({ detail: response.statusText }));
         const errorMessage = errorData.detail || errorData.error?.message || response.statusText;
         throw new Error(errorMessage);
@@ -305,6 +307,7 @@ export function useChatStream({
       );
 
       if (!response.ok) {
+        if (response.status === 401) reportUnauthorized(response.url);
         const errorData = await response.json().catch(() => ({ detail: response.statusText }));
         const errorMessage = errorData.detail || errorData.error?.message || response.statusText;
         throw new Error(errorMessage);

@@ -18,8 +18,9 @@
  *   npx playwright test test/e2e/auth-failure.spec.ts
  */
 
-import { test, expect } from './fixtures';
+import { test, expect, signInViaUI, signOutViaUI } from './fixtures';
 import type { Page, Route, Frame } from '@playwright/test';
+import { TEST_CREDENTIALS } from '../config';
 
 const ME_URL = '**/api/v1/me';
 const ME_401_RESPONSE = {
@@ -31,6 +32,11 @@ const ME_401_RESPONSE = {
 /** Clear the MeContext sessionStorage cache so the next mount triggers fetchMe(). */
 async function clearMeCache(page: Page) {
   await page.evaluate(() => sessionStorage.removeItem('me.cache'));
+}
+
+/** Reload; the 401 redirect can interrupt it (WebKit reports that as an error). */
+async function reloadExpectingRedirect(page: Page) {
+  await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
 }
 
 // ---------------------------------------------------------------------------
@@ -48,7 +54,7 @@ test.describe('Auth failure — 401 from /me redirects to /signin', () => {
 
     // Reload simulates the "backend DB swapped, user no longer exists" scenario.
     // The token in localStorage is still valid locally; the server will reject it.
-    await page.reload({ waitUntil: 'domcontentloaded' });
+    await reloadExpectingRedirect(page);
 
     // Must redirect to /signin — NOT remain on spinner for 5 minutes.
     await page.waitForURL('**/signin', { timeout: 10_000 });
@@ -62,7 +68,7 @@ test.describe('Auth failure — 401 from /me redirects to /signin', () => {
     await clearMeCache(page);
 
     const start = Date.now();
-    await page.reload({ waitUntil: 'domcontentloaded' });
+    await reloadExpectingRedirect(page);
     await page.waitForURL('**/signin', { timeout: 10_000 });
 
     const elapsed = Date.now() - start;
@@ -90,7 +96,7 @@ test.describe('Auth failure — 401 from /me redirects to /signin', () => {
       }
     });
 
-    await page.reload({ waitUntil: 'domcontentloaded' });
+    await reloadExpectingRedirect(page);
     await page.waitForURL('**/signin', { timeout: 10_000 });
 
     // Wait a beat to catch any delayed duplicate navigation.
@@ -109,7 +115,7 @@ test.describe('Auth failure — 401 from /me redirects to /signin', () => {
     await page.route(ME_URL, (route: Route) => route.fulfill(ME_401_RESPONSE));
     await clearMeCache(page);
 
-    await page.reload({ waitUntil: 'domcontentloaded' });
+    await reloadExpectingRedirect(page);
     await page.waitForURL('**/signin', { timeout: 10_000 });
 
     const reason = await page.evaluate(() => {
@@ -137,7 +143,7 @@ test.describe('Auth failure — 401 from /me redirects to /signin', () => {
     await page.route(ME_URL, (route: Route) => route.fulfill(ME_401_RESPONSE));
     await clearMeCache(page);
 
-    await page.reload({ waitUntil: 'domcontentloaded' });
+    await reloadExpectingRedirect(page);
 
     // AppSidebar / the main nav lives inside ProvisioningGuard's children.
     // If status is forced to "loading" before signOut fires, it will never
@@ -163,7 +169,7 @@ test.describe('Auth failure — 401 from /me redirects to /signin', () => {
     await page.route(ME_URL, (route: Route) => route.fulfill(ME_401_RESPONSE));
     await clearMeCache(page);
 
-    await page.reload({ waitUntil: 'domcontentloaded' });
+    await reloadExpectingRedirect(page);
     await page.waitForURL('**/signin', { timeout: 10_000 });
 
     const tokenAfter = await page.evaluate(
@@ -179,13 +185,37 @@ test.describe('Auth failure — 401 from /me redirects to /signin', () => {
   // Re-navigation to a protected route after logout shows signin, not spinner
   // -------------------------------------------------------------------------
 
+  test('a 401 from any authenticated endpoint logs out once (not only /me)', async ({
+    adminAuthenticatedPage: page,
+  }) => {
+    await page.goto('/projects');
+    await page.waitForLoadState('networkidle');
+
+    // /me stays valid; only the contacts list is rejected
+    await page.route('**/api/v1/contacts*', (route: Route) => route.fulfill(ME_401_RESPONSE));
+
+    let signinNavigations = 0;
+    page.on('framenavigated', (frame: Frame) => {
+      if (frame === page.mainFrame() && frame.url().includes('/signin')) signinNavigations++;
+    });
+
+    await page.goto('/contacts');
+    await page.waitForURL('**/signin', { timeout: 10_000 });
+    await page.waitForTimeout(1_000);
+
+    expect(signinNavigations).toBe(1);
+    const reason = await page.evaluate(() => JSON.parse(sessionStorage.getItem('logoutReason') ?? 'null'));
+    expect(reason?.message).toBe('Your session has expired');
+    expect(await page.evaluate(() => localStorage.getItem('token') ?? sessionStorage.getItem('token'))).toBeNull();
+  });
+
   test('navigating to a protected route after 401 logout shows signin form', async ({
     adminAuthenticatedPage: page,
   }) => {
     await page.route(ME_URL, (route: Route) => route.fulfill(ME_401_RESPONSE));
     await clearMeCache(page);
 
-    await page.reload({ waitUntil: 'domcontentloaded' });
+    await reloadExpectingRedirect(page);
     await page.waitForURL('**/signin', { timeout: 10_000 });
 
     // Stop intercepting /me so it can respond normally.
@@ -198,5 +228,18 @@ test.describe('Auth failure — 401 from /me redirects to /signin', () => {
     // useAuth finds no token and redirects — must not spin or crash.
     await expect(page).toHaveURL(/\/signin/);
     await expect(page.locator('input[type="email"]').first()).toBeVisible();
+  });
+});
+
+test.describe('Sign out', () => {
+  test('clears a session-only token (Keep me logged in unchecked)', async ({ page }) => {
+    await signInViaUI(page, TEST_CREDENTIALS.admin.email, TEST_CREDENTIALS.admin.password, { keepLoggedIn: false });
+    expect(await page.evaluate(() => sessionStorage.getItem('token'))).not.toBeNull();
+
+    await signOutViaUI(page);
+
+    expect(await page.evaluate(() => sessionStorage.getItem('token'))).toBeNull();
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/signin/);
   });
 });

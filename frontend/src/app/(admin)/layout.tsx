@@ -10,6 +10,7 @@ import Backdrop from "@/layout/Backdrop";
 import React, { useEffect } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { logout } from "@/app/lib/util";
+import { setUnauthorizedHandler } from "@/lib/authFailure";
 import { AiPanelProvider, useAiPanel } from "@/context/AiPanelContext";
 import { ResizablePanel } from "@/components/ai-panel/ResizablePanel";
 import { InPageChat } from "@/components/ai-panel/InPageChat";
@@ -29,6 +30,14 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     newPanelConversation();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationKey]);
+
+  // Any authenticated request answered with 401 ends the session
+  useEffect(() => {
+    setUnauthorizedHandler(() =>
+      logout(router, { message: "Your session has expired", action: "Please sign in again" })
+    );
+    return () => setUnauthorizedHandler(null);
+  }, [router]);
 
   useEffect(() => {
     const checkTokenExpiration = () => {

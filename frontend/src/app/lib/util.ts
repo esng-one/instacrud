@@ -5,16 +5,20 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { OpenAPI } from "@/api";
 import { clearMeCache, resetAuthFailed } from "@/context/MeContext";
+import { getToken, removeToken } from "@/lib/tokenStorage";
 import { useEffect, useState } from "react";
 import { createTheme } from "@mui/material/styles";
 import { DetailField } from "@/components/entity/EntityDetailView";
 
 export function logout(router: ReturnType<typeof useRouter>, reason?: { message: string, action: string }, redirectPath: string = "/signin") {
+  // Already logged out (e.g. several 401s at once): don't redirect twice
+  if (!OpenAPI.TOKEN && !getToken()) return;
   if (reason) {
     sessionStorage.setItem("logoutReason", JSON.stringify(reason));
   }
-  localStorage.removeItem("token");
+  removeToken();
   localStorage.removeItem("user.info");
+  localStorage.removeItem("org.status");
   clearMeCache();
   resetAuthFailed();
   sessionStorage.setItem("originalUrl", window.location.pathname);
