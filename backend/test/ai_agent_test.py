@@ -233,13 +233,13 @@ async def test_completion_claude_sonnet(ai_test_context):
     headers_user = ai_test_context["headers_user"]
 
     resp = await http_client.post("/api/v1/completion", json={
-        "model_id": "claude-sonnet-4-5",
+        "model_id": "claude-sonnet-5-5",
         "prompt": "Say 'Hello' in French. Answer with just the French word.",
         "stream": False
     }, headers=headers_user, timeout=90.0)
 
     if resp.status_code == 404:
-        pytest.skip("Model claude-sonnet-4-5 not found")
+        pytest.skip("Model claude-sonnet-5-5 not found")
     if resp.status_code == 500 and ("api_key" in resp.text.lower() or "authentication" in resp.text.lower()):
         pytest.skip("Claude API key not configured")
     if resp.status_code == 403:
@@ -363,7 +363,7 @@ async def test_completion_deepinfra_llama(ai_test_context):
     headers_user = ai_test_context["headers_user"]
 
     resp = await http_client.post("/api/v1/completion", json={
-        "model_id": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+        "model_id": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
         "prompt": "What is the capital of France? Answer in one word.",
         "stream": False
     }, headers=headers_user, timeout=90.0)

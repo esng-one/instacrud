@@ -114,7 +114,7 @@ class AppSettings(BaseSettings):
     EMAIL_FROM_NAME: str = "InstaCRUD"
 
     # === Embeddings ===
-    DEFAULT_EMBEDDING_MODEL: str = "intfloat/multilingual-e5-large"
+    DEFAULT_EMBEDDING_MODEL: str = "BAAI/bge-m3"
 
     # === AI Tool Access ===
     # Global killswitch: disables every AI tool function entirely.
