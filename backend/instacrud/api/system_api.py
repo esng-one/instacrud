@@ -279,6 +279,9 @@ async def add_user(
     if not requester:
         raise HTTPException(status_code=404, detail="Requester not found")
 
+    if requester.role == Role.ORG_ADMIN and data.role == Role.ADMIN:
+        raise HTTPException(status_code=403, detail="ORG_ADMIN cannot create ADMIN users")
+
     if requester.role == Role.ORG_ADMIN:
         organization_id = requester.organization_id
     elif requester.role == Role.ADMIN and not data.organization_id:
@@ -379,6 +382,9 @@ async def update_user(
 
     if user_ctx.role == Role.ORG_ADMIN and str(user.organization_id) != user_ctx.organization_id:
         raise HTTPException(status_code=403, detail="Not authorized to update this user")
+
+    if user_ctx.role == Role.ORG_ADMIN and data.role == Role.ADMIN:
+        raise HTTPException(status_code=403, detail="ORG_ADMIN cannot promote users to ADMIN")
 
     if data.email is not None:
         user.email = data.email
