@@ -383,6 +383,9 @@ async def update_user(
     if user_ctx.role == Role.ORG_ADMIN and str(user.organization_id) != user_ctx.organization_id:
         raise HTTPException(status_code=403, detail="Not authorized to update this user")
 
+    if user_ctx.role == Role.ORG_ADMIN and user.role == Role.ADMIN:
+        raise HTTPException(status_code=403, detail="ORG_ADMIN cannot modify ADMIN users")
+
     if user_ctx.role == Role.ORG_ADMIN and data.role == Role.ADMIN:
         raise HTTPException(status_code=403, detail="ORG_ADMIN cannot promote users to ADMIN")
 
@@ -424,6 +427,9 @@ async def delete_user(
 
     if user_ctx.role == Role.ORG_ADMIN and str(user.organization_id) != user_ctx.organization_id:
         raise HTTPException(status_code=403, detail="Not authorized to delete this user")
+
+    if user_ctx.role == Role.ORG_ADMIN and user.role == Role.ADMIN:
+        raise HTTPException(status_code=403, detail="ORG_ADMIN cannot delete ADMIN users")
 
     await PasswordResetToken.find({"user_id": user.id}).delete_many()
     await user.delete()
