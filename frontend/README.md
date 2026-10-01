@@ -1,6 +1,6 @@
 # InstaCRUD Frontend
 
-Next.js 15 + TypeScript + Tailwind CSS frontend for InstaCRUD.
+Next.js 16 + TypeScript + Tailwind CSS frontend for InstaCRUD.
 
 ## Test commands
 

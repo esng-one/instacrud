@@ -13,7 +13,7 @@ The Python backend already serves static files out of the box:
 - **`/`** — serves `backend/static/index.html`
 - **`/static/...`** — serves any file under `backend/static/`
 
-This is wired up in [`backend/instacrud/app.py`](../../../backend/instacrud/app.py) with two lines:
+This is wired up in [`backend/instacrud/app.py`](https://github.com/esng-one/instacrud/blob/main/backend/instacrud/app.py) with two lines:
 
 ```python
 # Mounts the static/ directory at /static

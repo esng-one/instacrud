@@ -4,11 +4,11 @@
 
 # InstaCRUD
 
-AI-enabled CRUD starter with a **Next.js 15** frontend and **FastAPI** backend, backed by **MongoDB** (via Beanie/Motor).
+AI-enabled CRUD starter with a **Next.js 16** frontend and **FastAPI** backend, backed by **MongoDB** (via Beanie/Motor).
 
 ## Stack
 
-- **Frontend:** Next.js 15, TypeScript, Tailwind CSS — lives in `frontend/`
+- **Frontend:** Next.js 16, TypeScript, Tailwind CSS — lives in `frontend/`
 - **Backend:** FastAPI, Python 3.13+, Beanie ODM — lives in `backend/`
 - **DB:** MongoDB
 - **Auth:** JWT + optional OAuth (Authlib)
