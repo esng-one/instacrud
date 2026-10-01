@@ -62,7 +62,7 @@ For a production non-Atlas setup, **[Milvus](https://milvus.io/)** is the recomm
 
 | Provider | Representative models |
 |---|---|
-| **OpenAI** | GPT-5 series, GPT-4 Turbo, GPT-4o, DALL-E 3, text-embedding-3-* |
+| **OpenAI** | GPT-5 series, GPT-4 Turbo, GPT-4o, GPT Image 1, text-embedding-3-* |
 | **Anthropic (Claude)** | Claude 4 Opus/Sonnet, Claude 3.7 Sonnet |
 | **DeepInfra** | Llama 4, Qwen 3, Mistral, Gemma 3, DeepSeek R2, BAAI embeddings |
 | **Ollama** | Any locally-served model (point `OLLAMA_BASE_URL` at your instance) — see [AI Assistant with Ollama](../getting-started/ollama-local-ai.md) |
