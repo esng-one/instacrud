@@ -3,10 +3,9 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CircularProgress, Box, ThemeProvider } from "@mui/material";
+import { CircularProgress, ThemeProvider } from "@mui/material";
 import toast, { Toaster } from "react-hot-toast";
 import { useModal } from "@/hooks/useModal";
-import { usePaginatedEntityList } from "@/hooks/usePaginatedEntityList";
 import Button from "@/components/ui/button/Button";
 import { Modal } from "@/components/ui/modal";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
@@ -16,7 +15,7 @@ import useUserRole from "@/hooks/useUserRole";
 import { AiModelsService } from "@/api/services/AiModelsService";
 import type { AiModel_Input as AiModel } from "@/api/models/AiModel_Input";
 
-import AiModelGrid from "@/components/entity/aimodel/AiModelGrid";
+import AiModelAdminList from "@/components/entity/aimodel/AiModelAdminList";
 import AiModelDetailView from "@/components/entity/aimodel/AiModelDetailView";
 import AiModelEditView from "@/components/entity/aimodel/AiModelEditView";
 
@@ -38,23 +37,25 @@ export default function AiModelsPage() {
   const { isOpen, openModal, closeModal } = useModal();
   const [isEditing, setIsEditing] = useState(false);
 
-  // Fetch function for paginated list
-  const fetchAiModels = useCallback((skip: number, limit: number) => {
-    return AiModelsService.listItemsAdminAiModelsGet(skip, limit);
+  // Load the full model list once (it's small) so filter/sort is instant client-side
+  const [items, setItems] = useState<AiModel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    try {
+      const models = await AiModelsService.listItemsAdminAiModelsGet(0, 500);
+      setItems(models);
+    } catch (error) {
+      console.error("Failed to fetch AI Models:", error);
+      toast.error("Failed to load AI Models");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const {
-    items,
-    page,
-    pageSize,
-    totalCount,
-    loading,
-    handlePageChange,
-    refetch,
-  } = usePaginatedEntityList<AiModel>({
-    fetchPage: fetchAiModels,
-    enabled: !id,
-  });
+  useEffect(() => {
+    if (!id) refetch();
+  }, [id, refetch]);
 
   // Default new AI Model template
   const initialNewAiModel: AiModel = {
@@ -188,17 +189,11 @@ export default function AiModelsPage() {
             </Button>
           </div>
 
-          <Box sx={{ height: 600, width: "100%" }}>
-            <AiModelGrid
-              rows={items}
-              page={page}
-              pageSize={pageSize}
-              totalCount={totalCount}
-              onPageChange={handlePageChange}
-              onRowClick={handleRowClick}
-              onDelete={handleDelete}
-            />
-          </Box>
+          <AiModelAdminList
+            rows={items}
+            onRowClick={handleRowClick}
+            onDelete={handleDelete}
+          />
         </>
       )}
 
