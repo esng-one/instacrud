@@ -76,6 +76,13 @@ class AiServiceClient(CompletionMixin, EmbeddingMixin, VisionMixin):
             kwargs["temperature"] = self.ai_model.temperature
 
         if self.ai_model.max_tokens is not None:
+            max_tok = self.ai_model.max_tokens
+            # max_tokens is the output cap. Some OpenAI-compatible providers
+            # (notably DeepInfra-proxied Qwen/ByteDance/Moonshot) reject an output
+            # cap above their limit (e.g. Qwen3-Max caps at 32768) with a 400, so
+            # clamp it for those services — 32k output is ample for chat.
+            if self.ai_model.service in (AiServiceProvider.DEEP_INFRA, AiServiceProvider.OLLAMA):
+                max_tok = min(max_tok, 32768)
             model_id = self.ai_model.model_identifier.lower()
             if self.ai_model.service == AiServiceProvider.OPEN_AI:
                 use_max_completion_tokens = (
@@ -85,11 +92,11 @@ class AiServiceClient(CompletionMixin, EmbeddingMixin, VisionMixin):
                     model_id.startswith("o3")
                 )
                 if use_max_completion_tokens:
-                    kwargs["max_completion_tokens"] = self.ai_model.max_tokens
+                    kwargs["max_completion_tokens"] = max_tok
                 else:
-                    kwargs["max_tokens"] = self.ai_model.max_tokens
+                    kwargs["max_tokens"] = max_tok
             else:
-                kwargs["max_tokens"] = self.ai_model.max_tokens
+                kwargs["max_tokens"] = max_tok
 
         if self.ai_model.service == AiServiceProvider.OPEN_AI:
             return ChatOpenAI(**kwargs)

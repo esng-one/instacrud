@@ -15,6 +15,30 @@ class CompletionMixin:
     user_id: Any
     track_usage: bool
 
+    @staticmethod
+    def _content_to_text(content: Any) -> str:
+        """Flatten LangChain message content to plain text.
+
+        Claude 5.x streams interleaved reasoning as structured content blocks
+        (a list of dicts) with the visible answer in the 'text' blocks. Keep the
+        text, drop 'thinking'/'reasoning' blocks, and pass plain strings through.
+        """
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts = []
+            for block in content:
+                if isinstance(block, str):
+                    parts.append(block)
+                elif isinstance(block, dict):
+                    if block.get("type") in ("thinking", "reasoning", "signature_delta", "redacted_thinking"):
+                        continue
+                    text = block.get("text")
+                    if text:
+                        parts.append(text)
+            return "".join(parts)
+        return "" if content is None else str(content)
+
     async def _check_tier_access(self) -> None:
         """To be implemented by the main class."""
         raise NotImplementedError
@@ -38,7 +62,7 @@ class CompletionMixin:
         if self.track_usage and self.user_id:
             await self._track_completion_usage(response)
 
-        return response.content
+        return self._content_to_text(response.content)
 
     async def get_completion_streaming(
         self, messages: Union[str, List[BaseMessage]], reasoning: bool = False
@@ -54,8 +78,9 @@ class CompletionMixin:
             return
 
         async for chunk in self.model.astream(messages):
-            if hasattr(chunk, 'content') and chunk.content:
-                yield chunk.content
+            text = self._content_to_text(getattr(chunk, 'content', None))
+            if text:
+                yield text
 
     async def _stream_with_reasoning(self, messages: List[BaseMessage]) -> AsyncIterator[str]:
         """Stream completion with reasoning/chain-of-thought support."""
@@ -125,7 +150,7 @@ class CompletionMixin:
 
     async def _stream_with_claude_thinking(self, messages: List[BaseMessage]) -> AsyncIterator[str]:
         """Handles streaming with native Claude thinking feature."""
-        from anthropic import AsyncAnthropic
+        from anthropic import AsyncAnthropic, BadRequestError
         client = AsyncAnthropic()
 
         anthropic_messages = []
@@ -151,35 +176,44 @@ class CompletionMixin:
         # Ensure max_tokens > budget_tokens but doesn't exceed model limit
         max_tokens = min(MODEL_MAX_TOKENS, thinking_budget + 16000)
 
-        stream_kwargs = {
+        base_kwargs = {
             "model": self.ai_model.model_identifier,
             "max_tokens": max_tokens,
             "messages": anthropic_messages,
-            "thinking": {
-                "type": "enabled",
-                "budget_tokens": thinking_budget
-            }
         }
         if system_content:
-            stream_kwargs["system"] = system_content
+            base_kwargs["system"] = system_content
 
-        async with client.messages.stream(**stream_kwargs) as stream:
-            in_thinking = False
-            async for event in stream:
-                if event.type == 'content_block_start' and event.content_block.type == 'thinking':
-                    in_thinking = True
-                    yield "[REASONING]"
-                elif event.type == 'content_block_start' and event.content_block.type == 'text':
-                    if in_thinking:
-                        yield "[/REASONING]"
-                        in_thinking = False
-                elif event.type == 'content_block_delta' and hasattr(event.delta, 'thinking'):
-                    yield event.delta.thinking
-                elif event.type == 'content_block_delta' and hasattr(event.delta, 'text'):
-                    yield event.delta.text
-                elif event.type == 'content_block_stop' and in_thinking:
-                    yield "[/REASONING]"
+        # Newer Claude models (5.x, Opus 4.6+) use adaptive thinking + an effort
+        # setting; older ones (e.g. Haiku 4.5) use the enabled+budget form. Try
+        # adaptive first and fall back to enabled on the "not supported" 400.
+        configs = [
+            {**base_kwargs, "thinking": {"type": "adaptive"}, "output_config": {"effort": "high"}},
+            {**base_kwargs, "thinking": {"type": "enabled", "budget_tokens": thinking_budget}},
+        ]
+        for i, stream_kwargs in enumerate(configs):
+            yielded = False
+            try:
+                async with client.messages.stream(**stream_kwargs) as stream:
                     in_thinking = False
+                    async for event in stream:
+                        if event.type == 'content_block_start' and event.content_block.type == 'thinking':
+                            in_thinking = True
+                            yield "[REASONING]"; yielded = True
+                        elif event.type == 'content_block_start' and event.content_block.type == 'text':
+                            if in_thinking:
+                                yield "[/REASONING]"; in_thinking = False; yielded = True
+                        elif event.type == 'content_block_delta' and hasattr(event.delta, 'thinking'):
+                            yield event.delta.thinking; yielded = True
+                        elif event.type == 'content_block_delta' and hasattr(event.delta, 'text'):
+                            yield event.delta.text; yielded = True
+                        elif event.type == 'content_block_stop' and in_thinking:
+                            yield "[/REASONING]"; in_thinking = False; yielded = True
+                return
+            except BadRequestError:
+                if not yielded and i < len(configs) - 1:
+                    continue
+                raise
 
     async def _stream_and_parse_thinking_tags(
         self,
