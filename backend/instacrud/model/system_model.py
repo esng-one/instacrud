@@ -4,6 +4,7 @@ from beanie import Document, Indexed, Insert, PydanticObjectId, Save, before_eve
 from pydantic import BaseModel, Field, EmailStr, field_serializer, field_validator
 from pymongo import IndexModel
 from datetime import datetime, timezone
+import secrets
 from typing import Annotated, Optional
 from enum import Enum
 from instacrud.context import current_user_context
@@ -86,9 +87,15 @@ class User(RootModel):
     organization_id: Annotated[Optional[PydanticObjectId], Indexed()] = None
     tier_id: Annotated[Optional[PydanticObjectId], Indexed()] = None
     local_only_conversations: Optional[bool] = None  # None means use org setting
+    auth_version: int = 0  # Increment to revoke previously issued bearer tokens.
+    oauth_identities: dict[str, str] = Field(default_factory=dict)
 
     class Settings:
         name = "users"
+        indexes = [
+            IndexModel([("oauth_identities.google", 1)], unique=True, sparse=True),
+            IndexModel([("oauth_identities.microsoft", 1)], unique=True, sparse=True),
+        ]
 
     async def save(self, *args, **kwargs):
         self.email = self.email.lower()
@@ -101,6 +108,10 @@ class CurrentUserContext(BaseModel):
     organization_id: Optional[str] = None
 
 class Invitation(RootModel):
+    # Invitation IDs are bearer capabilities. MongoDB's sequential ObjectIds are
+    # observable and guessable from other document IDs, so use random bytes.
+    id: PydanticObjectId = Field(default_factory=lambda: PydanticObjectId(secrets.token_bytes(12)))
+    email: Optional[EmailStr] = None
     organization_id: Annotated[PydanticObjectId, Indexed()]
     invited_by: Annotated[PydanticObjectId, Indexed()]
     invited_at: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
@@ -249,8 +260,9 @@ class UsageHistory(Document):
 # ----------------------------
 
 class OAuthSession(Document):
-    session_code: str
+    session_code: Annotated[str, Indexed(unique=True)]
     token: str
+    purpose: str = "signin"
     # TTL index: MongoDB removes document once expires_at < now
     expires_at: datetime = Indexed(expiresAfterSeconds=0)
 

@@ -9,6 +9,7 @@ import { EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import { OpenAPI } from "@/api/core/OpenAPI";
 import { SystemService } from "@/api/services/SystemService";
+import { OauthService } from "@/api/services/OauthService";
 import { useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
@@ -28,6 +29,24 @@ export default function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [linkProvider, setLinkProvider] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const provider = params.get("provider");
+    const nonce = params.get("link_intent");
+    const code = params.get("oauth_link_code");
+    if (!code || !provider || !nonce) return;
+    try {
+      const pending = JSON.parse(sessionStorage.getItem("oauthLinkIntent") || "null");
+      if (pending?.provider === provider && pending?.nonce === nonce &&
+          Date.now() - pending.created < 10 * 60 * 1000) {
+        setLinkProvider(provider);
+      }
+    } catch {
+      sessionStorage.removeItem("oauthLinkIntent");
+    }
+  }, []);
 
   const {
     widget: turnstileWidget,
@@ -54,6 +73,21 @@ export default function SignInForm() {
       const res = await SystemService.signinSigninPost({ email, password }, token);
       if (res && res.access_token) {
         setToken(res.access_token, isChecked);
+        const linkCode = new URLSearchParams(window.location.search).get("oauth_link_code");
+        if (linkCode && linkProvider) {
+          try {
+            OpenAPI.TOKEN = res.access_token;
+            await OauthService.linkOauthIdentityOauthLinkPost({
+              link_code: linkCode,
+              current_password: password,
+            });
+            toast.success(`${linkProvider === "google" ? "Google" : "Microsoft"} account linked`);
+          } catch {
+            toast.error("Signed in, but account linking failed. Please try again.");
+          } finally {
+            sessionStorage.removeItem("oauthLinkIntent");
+          }
+        }
         const originalUrl = sessionStorage.getItem("originalUrl") || "/";
         sessionStorage.removeItem("originalUrl");
         router.push(originalUrl);
@@ -69,7 +103,12 @@ export default function SignInForm() {
   };
 
   const handleOAuthSignin = (provider: string) => {
-    window.location.href = `${OpenAPI.BASE}/api/v1/signin/${provider}`;
+    const nonce = Array.from(crypto.getRandomValues(new Uint8Array(24)), (byte) =>
+      byte.toString(16).padStart(2, "0")).join("");
+    sessionStorage.setItem("oauthLinkIntent", JSON.stringify({ provider, nonce, created: Date.now() }));
+    // FastAPI must perform the provider redirect; this is not a Next.js route.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign(`${OpenAPI.BASE}/api/v1/signin/${provider}?link_intent=${nonce}`);
   };
 
   return (
@@ -80,7 +119,9 @@ export default function SignInForm() {
             Sign In
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Enter your email and password to sign in!
+            {linkProvider
+              ? `Sign in with your password to link your ${linkProvider === "google" ? "Google" : "Microsoft"} account.`
+              : "Enter your email and password to sign in!"}
           </p>
         </div>
         <div>

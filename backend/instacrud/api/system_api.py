@@ -389,20 +389,32 @@ async def update_user(
     if user_ctx.role == Role.ORG_ADMIN and data.role == Role.ADMIN:
         raise HTTPException(status_code=403, detail="ORG_ADMIN cannot promote users to ADMIN")
 
+    changes = {"updated_at": datetime.now(tz=timezone.utc), "updated_by": user_ctx.email}
     if data.email is not None:
-        user.email = data.email
+        changes["email"] = data.email.lower()
     if data.name is not None:
-        user.name = data.name
+        changes["name"] = data.name
     if data.role is not None:
-        user.role = data.role
+        changes["role"] = data.role.value
     if data.organization_id is not None:
         if user_ctx.role != Role.ADMIN:
             raise HTTPException(status_code=403, detail="Only admins can change user organization")
-        user.organization_id = PydanticObjectId(data.organization_id) if data.organization_id else None
+        changes["organization_id"] = PydanticObjectId(data.organization_id) if data.organization_id else None
     if data.password is not None:
-        user.hashed_password = pwd_context.hash(data.password)
+        changes["hashed_password"] = pwd_context.hash(data.password)
 
-    await user.save()
+    update = {"$set": changes}
+    if any(value is not None for value in
+           (data.email, data.role, data.organization_id, data.password)):
+        update["$inc"] = {"auth_version": 1}
+    query = {"_id": user.id}
+    if user_ctx.role == Role.ORG_ADMIN:
+        query["organization_id"] = user.organization_id
+        query["role"] = {"$ne": Role.ADMIN.value}
+    result = await User.get_pymongo_collection().update_one(query, update)
+    if not result.matched_count:
+        raise HTTPException(status_code=403, detail="User changed during update")
+    user = await User.get(user.id)
 
     return UserResponse(
         id=str(user.id),
@@ -479,6 +491,7 @@ async def invite_user(
     expires_at = datetime.now(tz=timezone.utc) + timedelta(seconds=data.expires_in_seconds)
 
     invitation = Invitation(
+        email=data.email.lower(),
         organization_id=organization_id,
         invited_by=requester.id,
         expires_at=expires_at,
@@ -636,27 +649,27 @@ async def reset_password(request: Request, data: ResetPasswordRequest):
 
     hashed_token = sha256(data.token.encode()).hexdigest()
 
-    # Find valid token
-    token_obj = await PasswordResetToken.find_one({
+    # Spend the reset token in one database operation, before updating the user.
+    token_doc = await PasswordResetToken.get_pymongo_collection().find_one_and_update({
         "token": hashed_token,
         "used": False,
         "expires_at": {"$gt": datetime.now(tz=timezone.utc)}
-    })
+    }, {"$set": {"used": True}})
 
-    if not token_obj:
+    if not token_doc:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
 
     # Get user and update password
-    user = await User.get(token_obj.user_id)
+    user = await User.get(token_doc["user_id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    user.hashed_password = pwd_context.hash(data.new_password)
-    await user.save()
-
-    # Mark token as used
-    token_obj.used = True
-    await token_obj.save()
+    await User.get_pymongo_collection().update_one(
+        {"_id": user.id},
+        {"$set": {"hashed_password": pwd_context.hash(data.new_password),
+                  "updated_at": datetime.now(tz=timezone.utc)},
+         "$inc": {"auth_version": 1}},
+    )
 
     return MessageResponse(message="Password reset successfully")
 
@@ -678,8 +691,15 @@ async def change_password(
         raise HTTPException(status_code=400, detail="Current password is incorrect")
 
     # Update password
-    user.hashed_password = pwd_context.hash(data.new_password)
-    await user.save()
+    result = await User.get_pymongo_collection().update_one(
+        {"_id": user.id, "hashed_password": user.hashed_password},
+        {"$set": {"hashed_password": pwd_context.hash(data.new_password),
+                  "updated_at": datetime.now(tz=timezone.utc),
+                  "updated_by": user_context.email},
+         "$inc": {"auth_version": 1}},
+    )
+    if not result.matched_count:
+        raise HTTPException(status_code=409, detail="Password changed during request")
 
     return MessageResponse(message="Password changed successfully")
 
@@ -752,9 +772,16 @@ async def signup(
         user_role = Role.ORG_ADMIN
 
     elif data.invitation_id:
-        invitation = await Invitation.get(PydanticObjectId(data.invitation_id))
+        try:
+            invitation = await Invitation.get(PydanticObjectId(data.invitation_id))
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=400, detail="Invalid invitation")
         if not invitation:
             raise HTTPException(status_code=404, detail="Invitation not found")
+
+        # Older invitations have no recipient binding and must be reissued.
+        if not invitation.email or invitation.email.lower() != data.email.lower():
+            raise HTTPException(status_code=403, detail="Invitation is for a different email")
 
         if invitation.expires_at < datetime.now(tz=timezone.utc):
             raise HTTPException(status_code=401, detail="Invitation has expired")
@@ -779,11 +806,25 @@ async def signup(
         organization_id=organization_id,
     )
 
-    await user.insert()
-
     if data.invitation_id:
-        invitation.accepted = True
-        await invitation.save()
+        # Claim before creating the account, atomically across concurrent signup
+        # requests and workers. A normal read followed by save is raceable.
+        claimed = await Invitation.get_pymongo_collection().find_one_and_update(
+            {"_id": invitation.id, "accepted": False, "email": data.email.lower(),
+             "expires_at": {"$gt": datetime.now(tz=timezone.utc)}},
+            {"$set": {"accepted": True}},
+        )
+        if not claimed:
+            raise HTTPException(status_code=401, detail="Invalid or used invitation")
+
+    try:
+        await user.insert()
+    except Exception:
+        if data.invitation_id:
+            await Invitation.get_pymongo_collection().update_one(
+                {"_id": invitation.id}, {"$set": {"accepted": False}}
+            )
+        raise
 
     return SignupResponse(
         message="User signed up successfully",
@@ -837,6 +878,7 @@ async def signin(
         "tier": tier_level,
         "tier_name": tier_name,
         "has_password": bool(user.hashed_password),
+        "auth_version": user.auth_version,
     }
     token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
 

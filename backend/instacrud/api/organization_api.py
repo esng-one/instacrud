@@ -415,7 +415,8 @@ async def _faiss_semantic_search(
 
 
 # Endpoint to recalculate embeddings for a document
-@router.post("/documents/{document_id}/recalculate-embedding", tags=["documents"])
+@router.post("/documents/{document_id}/recalculate-embedding", tags=["documents"],
+             dependencies=[Depends(role_required(Role.ADMIN, Role.ORG_ADMIN, Role.USER))])
 async def recalculate_document_embedding(document_id: str):
     """
     Force recalculate the content embedding for a specific document.
@@ -447,7 +448,8 @@ async def recalculate_document_embedding(document_id: str):
 
 
 # Endpoint to recalculate embeddings for all documents
-@router.post("/documents/recalculate-embeddings-all", tags=["documents"])
+@router.post("/documents/recalculate-embeddings-all", tags=["documents"],
+             dependencies=[Depends(role_required(Role.ADMIN, Role.ORG_ADMIN, Role.USER))])
 async def recalculate_all_document_embeddings():
     """
     Force recalculate embeddings for all documents that have content.

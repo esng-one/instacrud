@@ -3,7 +3,9 @@
 from datetime import datetime, timedelta, timezone
 
 from beanie import PydanticObjectId
-from fastapi import APIRouter, Request, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, Request, HTTPException, Query, BackgroundTasks, Depends
+from pydantic import BaseModel, Field
+from passlib.context import CryptContext
 from loguru import logger
 from authlib.integrations.starlette_client import OAuth
 from authlib.jose import JsonWebToken
@@ -12,7 +14,10 @@ import jwt
 import json
 import base64
 import secrets
+import re
 from typing import Optional
+from uuid import UUID
+from urllib.parse import urlencode
 from starlette.responses import RedirectResponse
 import httpx
 
@@ -20,16 +25,19 @@ from instacrud.config import settings
 from instacrud.crypto import encrypt_connection_url
 from instacrud.model.system_model import OAuthSession, User, Invitation, Organization, Tier, Role
 from instacrud.api.system_dto import TokenResponse
+from instacrud.context import current_user_context
 from instacrud.api.api_utils import (SECRET_KEY, ALGORITHM, TOKEN_EXPIRATION_SECONDS, GOOGLE_CLIENT_ID,
                                      GOOGLE_CLIENT_SECRET, MS_CLIENT_ID, MS_CLIENT_SECRET, MS_TENANT_ID,
-                                     FRONTEND_BASE_URL)
+                                     FRONTEND_BASE_URL, role_required)
 
 SESSION_EXPIRATION_SECONDS = 24 * 60 * 60  # 24 hours
+LINK_EXPIRATION_SECONDS = 10 * 60
 OAUTH_SIGNIN = "/signin"
 OAUTH_SIGNUP = "/signup"
 OAUTH_CALLBACK = "/oauth/callback"
 
 router = APIRouter(tags=["oauth"])
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # OAuth setup
 oauth = OAuth()
@@ -56,11 +64,28 @@ oauth.register(
 
 async def decode_microsoft_id_token(id_token: str) -> dict:
     """
-    Decode Microsoft id_token manually to avoid `iss` validation errors in multi-tenant scenario.
-    Validates `aud` and `exp` only.
+    Validate a Microsoft ID token against the signing keys and tenant issuer.
+    The common endpoint signs for many tenants, so its issuer is tenant-specific.
     """
+    if not MS_CLIENT_ID:
+        raise ValueError("Microsoft OAuth is not configured")
+    unverified = jwt.decode(id_token, options={"verify_signature": False})
+    tenant_id = unverified.get("tid", "")
+    try:
+        tenant_id = str(UUID(tenant_id))
+    except (ValueError, TypeError, AttributeError) as exc:
+        raise ValueError("Invalid Microsoft tenant") from exc
+    if MS_TENANT_ID not in ("common", "organizations", "consumers"):
+        # A configured tenant ID must not accept tokens from other tenants.
+        try:
+            if str(UUID(MS_TENANT_ID)) != tenant_id:
+                raise ValueError("Microsoft tenant mismatch")
+        except (TypeError, AttributeError) as exc:
+            raise ValueError("Invalid configured Microsoft tenant") from exc
+
     async with httpx.AsyncClient() as http:
         jwks_resp = await http.get("https://login.microsoftonline.com/common/discovery/v2.0/keys")
+        jwks_resp.raise_for_status()
         jwks = jwks_resp.json()
 
     jwt_obj = JsonWebToken(["RS256"])
@@ -70,11 +95,38 @@ async def decode_microsoft_id_token(id_token: str) -> dict:
         claims_options={
             "aud": {"essential": True, "value": MS_CLIENT_ID},
             "exp": {"essential": True},
-            # Skip 'iss' validation
+            "iss": {"essential": True, "value": f"https://login.microsoftonline.com/{tenant_id}/v2.0"},
+            "tid": {"essential": True, "value": tenant_id},
+            "sub": {"essential": True},
         },
     )
     claims.validate()
     return claims
+
+
+async def verified_oauth_identity(provider: str, token: dict) -> tuple[str, str, str | None]:
+    """Return an email for display and a stable, provider-scoped account key."""
+    if provider == "microsoft":
+        id_token = token.get("id_token")
+        if not id_token:
+            raise ValueError("Missing Microsoft ID token")
+        claims = await decode_microsoft_id_token(id_token)
+        tenant_id = claims.get("tid")
+        subject = claims.get("oid") or claims.get("sub")
+        if not tenant_id or not subject:
+            raise ValueError("Missing Microsoft subject")
+        email = (claims.get("email") or claims.get("preferred_username") or "").lower()
+        return email, f"{tenant_id}:{subject}", claims.get("name")
+    if provider == "google":
+        # authorize_access_token parses and validates the Google ID token.
+        claims = token.get("userinfo")
+        if not token.get("id_token") or not claims or claims.get("email_verified") is not True:
+            raise ValueError("Google email is not verified")
+        subject = claims.get("sub")
+        if not subject:
+            raise ValueError("Missing Google subject")
+        return (claims.get("email") or "").lower(), subject, claims.get("name")
+    raise ValueError("Unknown OAuth provider")
 
 # ----------------------------
 # OAuth LOGIN FLOW (sign in only)
@@ -82,16 +134,15 @@ async def decode_microsoft_id_token(id_token: str) -> dict:
 
 @router.get("/session", response_model=TokenResponse)
 async def get_session_token(session_code: str = Query(...)):
-    session = await OAuthSession.find_one({
+    session = await OAuthSession.get_pymongo_collection().find_one_and_delete({
         "session_code": session_code,
+        "purpose": "signin",
         "expires_at": {"$gt": datetime.now(tz=timezone.utc)}
     })
     if not session:
         raise HTTPException(401, detail="Invalid or expired session code")
 
-    token = session.token
-    # enforce one-time use
-    await session.delete()
+    token = session["token"]
 
     return TokenResponse(
         access_token=token,
@@ -100,10 +151,14 @@ async def get_session_token(session_code: str = Query(...)):
     )
 
 @router.get("/signin/{provider}", name="oauth_login", response_class=RedirectResponse)
-async def oauth_login(provider: str, request: Request):
+async def oauth_login(provider: str, request: Request, link_intent: str | None = None):
     client = oauth.create_client(provider)
     if not client:
         raise HTTPException(400, f"OAuth provider '{provider}' not configured.")
+    if link_intent:
+        if not re.fullmatch(r"[a-f0-9]{32,64}", link_intent):
+            raise HTTPException(400, "Invalid link intent")
+        request.session["oauth_link_intent"] = link_intent
     redirect_uri = request.url_for("oauth_login_callback", provider=provider)
     return await client.authorize_redirect(request, redirect_uri)
 
@@ -115,27 +170,33 @@ async def oauth_login_callback(provider: str, request: Request):
         claims_options={"iss": {"essential": False}}
     )
 
-    if provider == "microsoft":
-        id_token = token.get("id_token")
-        if not id_token:
-            return redirect_with_message("error", "No id_token in response", path=OAUTH_SIGNIN)
-        try:
-            claims = await decode_microsoft_id_token(id_token)
-        except JoseError as exc:
-            return redirect_with_message("error", f"Invalid ID token: {exc}", path=OAUTH_SIGNIN)
-        email = (claims.get("email") or claims.get("preferred_username") or "").lower()
-    else:
-        user_info = token.get("userinfo") or await client.userinfo(token=token)
-        email = user_info.get("email", "").lower()
-
+    try:
+        email, subject, _ = await verified_oauth_identity(provider, token)
+    except (JoseError, ValueError, jwt.InvalidTokenError):
+        return redirect_with_message("error", "OAuth identity verification failed.", path=OAUTH_SIGNIN)
     if not email:
-        # raise HTTPException(400, "OAuth login failed: email not returned.")
-        return redirect_with_message("error", "OAuth login failed: email not returned.", path=OAUTH_SIGNIN)
+        return redirect_with_message("error", "OAuth identity verification failed.", path=OAUTH_SIGNIN)
 
-    user = await User.find_one({"email": email})
+    # An email address is mutable and is not proof that this is the same person.
+    # Only a previously linked, immutable provider subject may sign in.
+    user = await User.find_one({f"oauth_identities.{provider}": subject})
     if not user:
-        # raise HTTPException(401, "No account found for this email.")
-        return redirect_with_message("error", "No account found for this email.", path=OAUTH_SIGNIN)
+        existing = await User.find_one({"email": email})
+        link_intent = request.session.pop("oauth_link_intent", None)
+        if not existing or not link_intent:
+            return redirect_with_message("error", "OAuth identity is not linked to an account.", path=OAUTH_SIGNIN)
+        link_code = secrets.token_urlsafe(32)
+        await OAuthSession(
+            session_code=link_code,
+            purpose="link",
+            token=json.dumps({"provider": provider, "subject": subject, "email": email}),
+            expires_at=datetime.now(tz=timezone.utc) + timedelta(seconds=LINK_EXPIRATION_SECONDS),
+        ).insert()
+        query = urlencode({"oauth_link_code": link_code, "link_intent": link_intent,
+                           "provider": provider})
+        return RedirectResponse(f"{FRONTEND_BASE_URL}{OAUTH_SIGNIN}?{query}")
+
+    request.session.pop("oauth_link_intent", None)
 
     expiration = datetime.now(tz=timezone.utc) + timedelta(seconds=TOKEN_EXPIRATION_SECONDS)
     org_tier = await get_organization_tier(user.organization_id)
@@ -148,6 +209,7 @@ async def oauth_login_callback(provider: str, request: Request):
         "role": user.role.value,
         "exp": expiration,
         "has_password": bool(user.hashed_password),
+        "auth_version": user.auth_version,
     }
     jwt_token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -157,11 +219,52 @@ async def oauth_login_callback(provider: str, request: Request):
     await OAuthSession(
         session_code=session_code,
         token=jwt_token,
+        purpose="signin",
         expires_at=expires_at
     ).insert()
 
     frontend_redirect = f"{FRONTEND_BASE_URL}{OAUTH_CALLBACK}?session_code={session_code}"
     return RedirectResponse(url=frontend_redirect)
+
+
+class OAuthLinkRequest(BaseModel):
+    link_code: str = Field(min_length=20, max_length=128)
+    current_password: str
+
+
+@router.post("/oauth/link", tags=["oauth"])
+async def link_oauth_identity(
+    data: OAuthLinkRequest,
+    _: None = Depends(role_required(Role.ADMIN, Role.ORG_ADMIN, Role.USER, Role.RO_USER)),
+):
+    """Link an OAuth subject to the account authenticated by a fresh password login."""
+    ctx = current_user_context.get()
+    user = await User.get(ctx.user_id)
+    if not user or not user.hashed_password or not pwd_context.verify(
+        data.current_password, user.hashed_password
+    ):
+        raise HTTPException(403, "Password confirmation required")
+    session = await OAuthSession.get_pymongo_collection().find_one_and_delete({
+        "session_code": data.link_code,
+        "purpose": "link",
+        "expires_at": {"$gt": datetime.now(tz=timezone.utc)},
+    })
+    if not session:
+        raise HTTPException(400, "Invalid or expired link code")
+    identity = json.loads(session["token"])
+    provider = identity.get("provider")
+    subject = identity.get("subject")
+    if (provider not in {"google", "microsoft"} or not subject
+            or identity.get("email") != ctx.email.lower()):
+        raise HTTPException(403, "OAuth identity does not match this account")
+    linked = await User.find_one({f"oauth_identities.{provider}": subject})
+    if linked and linked.id != ctx.user_id:
+        raise HTTPException(409, "OAuth identity is already linked")
+    await User.get_pymongo_collection().update_one(
+        {"_id": ctx.user_id},
+        {"$set": {f"oauth_identities.{provider}": subject}},
+    )
+    return {"message": "OAuth identity linked"}
 
 # ----------------------------
 # OAuth SIGNUP FLOW (invited)
@@ -183,20 +286,10 @@ async def oauth_signup_callback(provider: str, request: Request, background_task
         claims_options={"iss": {"essential": False}}
     )
 
-    if provider == "microsoft":
-        id_token = token.get("id_token")
-        if not id_token:
-            return redirect_with_message("error", "No id_token in response", path=OAUTH_SIGNUP)
-        try:
-            claims = await decode_microsoft_id_token(id_token)
-        except JoseError as exc:
-            return redirect_with_message("error", f"Invalid ID token: {exc}", path=OAUTH_SIGNUP)
-        email = (claims.get("email") or claims.get("preferred_username") or "").lower()
-        name = claims.get("name") or claims.get("preferred_username")
-    else:
-        user_info = token.get("userinfo") or await client.userinfo(token=token)
-        email = user_info.get("email").lower()
-        name = user_info.get("name") or user_info.get("preferred_username")
+    try:
+        email, subject, name = await verified_oauth_identity(provider, token)
+    except (JoseError, ValueError, jwt.InvalidTokenError):
+        return redirect_with_message("error", "OAuth identity verification failed.")
 
     if not email:
         # raise HTTPException(400, "OAuth sign-up failed: email not returned.")
@@ -225,9 +318,15 @@ async def oauth_signup_callback(provider: str, request: Request, background_task
         return redirect_with_message("error", "Account already exists. Please sign in instead.")
 
     if invitation_id:
-        invitation = await Invitation.get(PydanticObjectId(invitation_id))
+        try:
+            invitation = await Invitation.get(PydanticObjectId(invitation_id))
+        except (ValueError, TypeError):
+            return redirect_with_message("error", "Invalid invitation")
         if not invitation:
             return redirect_with_message("error", "Invitation not found")
+
+        if not invitation.email or invitation.email.lower() != email:
+            return redirect_with_message("error", "Invitation is for a different email")
 
         if invitation.expires_at < datetime.now(tz=timezone.utc):
             return redirect_with_message("error", "Invitation has expired")
@@ -308,14 +407,25 @@ async def oauth_signup_callback(provider: str, request: Request, background_task
         email=email,
         name=name,
         role=user_role,
-        organization_id=organization_id
+        organization_id=organization_id,
+        oauth_identities={provider: subject},
     )
-    await user.insert()
-
     if invitation_id:
-        # Mark invitation as accepted
-        invitation.accepted = True
-        await invitation.save()
+        claimed = await Invitation.get_pymongo_collection().find_one_and_update(
+            {"_id": invitation.id, "email": email, "accepted": False,
+             "expires_at": {"$gt": datetime.now(tz=timezone.utc)}},
+            {"$set": {"accepted": True}},
+        )
+        if not claimed:
+            return redirect_with_message("error", "Invalid or used invitation")
+    try:
+        await user.insert()
+    except Exception:
+        if invitation_id:
+            await Invitation.get_pymongo_collection().update_one(
+                {"_id": invitation.id}, {"$set": {"accepted": False}}
+            )
+        raise
 
     return redirect_with_message("success", "User signed up successfully! Please sign in.", path=OAUTH_SIGNIN)
 

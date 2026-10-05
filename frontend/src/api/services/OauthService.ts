@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { OAuthLinkRequest } from '../models/OAuthLinkRequest';
 import type { TokenResponse } from '../models/TokenResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -30,17 +31,22 @@ export class OauthService {
     /**
      * Oauth Login
      * @param provider
+     * @param linkIntent
      * @returns void
      * @throws ApiError
      */
     public static oauthLoginSigninProviderGet(
         provider: string,
+        linkIntent?: (string | null),
     ): CancelablePromise<void> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/signin/{provider}',
             path: {
                 'provider': provider,
+            },
+            query: {
+                'link_intent': linkIntent,
             },
             errors: {
                 307: `Successful Response`,
@@ -63,6 +69,26 @@ export class OauthService {
             path: {
                 'provider': provider,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Link Oauth Identity
+     * Link an OAuth subject to the account authenticated by a fresh password login.
+     * @param requestBody
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static linkOauthIdentityOauthLinkPost(
+        requestBody: OAuthLinkRequest,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/oauth/link',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },

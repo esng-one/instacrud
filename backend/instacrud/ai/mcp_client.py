@@ -1,6 +1,32 @@
 from typing import List, Dict, Any, Optional
 import httpx
 from pydantic import BaseModel
+from urllib.parse import urlsplit, urlunsplit
+
+from instacrud.config import settings
+
+
+class McpServerAccessError(ValueError):
+    pass
+
+
+def validate_mcp_server_url(server_url: str) -> str:
+    """Accept only an operator-approved MCP base URL, with exact origin and path."""
+    try:
+        parsed = urlsplit(server_url)
+        if (parsed.scheme not in {"http", "https"} or not parsed.hostname
+                or parsed.username or parsed.password or parsed.query or parsed.fragment
+                or parsed.path.endswith("/.") or "/../" in parsed.path):
+            raise ValueError
+        normalized = urlunsplit((parsed.scheme, parsed.netloc.lower(),
+                                 parsed.path.rstrip("/"), "", ""))
+        allowed = {entry.strip().rstrip("/") for entry in settings.MCP_ALLOWED_SERVER_URLS.split(",")
+                   if entry.strip()}
+        if normalized not in allowed:
+            raise ValueError
+        return normalized
+    except ValueError as exc:
+        raise McpServerAccessError("MCP server is not approved") from exc
 
 
 class McpTool(BaseModel):
@@ -19,10 +45,13 @@ class McpResource(BaseModel):
 class McpClient:
 
     def __init__(self, server_url: str, api_key: Optional[str] = None):
-        self.server_url = server_url.rstrip('/')
+        self.server_url = validate_mcp_server_url(server_url)
         self.api_key = api_key
         self.client = httpx.AsyncClient(
-            headers={"Authorization": f"Bearer {api_key}"} if api_key else {}
+            headers={"Authorization": f"Bearer {api_key}"} if api_key else {},
+            follow_redirects=False,
+            trust_env=False,
+            timeout=10.0,
         )
 
     async def list_tools(self) -> List[McpTool]:
