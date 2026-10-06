@@ -3,7 +3,7 @@
 import tempfile
 
 from typing import List, Optional
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class AppSettings(BaseSettings):
@@ -21,6 +21,14 @@ class AppSettings(BaseSettings):
     ALGORITHM: str = "HS256"
     TOKEN_EXPIRATION_SECONDS: int = 86400
 
+    @model_validator(mode="after")
+    def validate_signing_configuration(self):
+        if self.ALGORITHM != "HS256":
+            raise ValueError("JWT algorithm must be HS256")
+        if self.MODE == "prod" and len(self.SECRET_KEY.encode("utf-8")) < 32:
+            raise ValueError("SECRET_KEY must have at least 32 bytes in production")
+        return self
+
     # === Connection URL Encryption ===
     # Dedicated key for encrypting org mongo_url values stored in the system DB.
     # STRONGLY RECOMMENDED to set this separately from SECRET_KEY.
@@ -35,6 +43,10 @@ class AppSettings(BaseSettings):
     MONGO_TLS_ALLOW_INVALID: bool = False
     # When true and DB_ENGINE is mongo/atlas, use Organization.mongo_url if set
     MONGO_USE_ORG_DB: bool = False
+
+    # Comma-separated exact MCP server base URLs approved by the operator.
+    # Empty means user-supplied outbound MCP connections are disabled.
+    MCP_ALLOWED_SERVER_URLS: str = ""
 
     # === GCP Firebase ===
     # Auth type: "ADC" (Application Default Credentials, default — works on

@@ -24,6 +24,7 @@ from instacrud.api.ai_dto import (
     McpResourceInfo,
 )
 from instacrud.ai.ai_service import AiServiceClient
+from instacrud.ai.mcp_client import McpServerAccessError, validate_mcp_server_url
 from instacrud.ai.usage_tracker import UsageLimitExceeded, TierAccessDenied
 from instacrud.model.system_model import AiModel, Role
 from instacrud.context import current_user_context
@@ -511,6 +512,7 @@ async def create_mcp_completion(
     The AI can use tools from the specified MCP server to help answer queries.
     """
     try:
+        validate_mcp_server_url(data.mcp_server_url)
         # Get AI model
         ai_model = await AiModel.find_one(AiModel.model_identifier == data.model_id)
         if not ai_model:
@@ -542,6 +544,8 @@ async def create_mcp_completion(
         finally:
             await client.close()
 
+    except McpServerAccessError:
+        raise HTTPException(status_code=400, detail="MCP server is not approved")
     except HTTPException:
         raise
     except Exception as e:
@@ -557,6 +561,7 @@ async def list_mcp_tools(
     List available tools from an MCP server.
     """
     try:
+        validate_mcp_server_url(request.mcp_server_url)
         from instacrud.ai.mcp_client import McpClient
 
         async with McpClient(request.mcp_server_url, request.mcp_api_key) as mcp_client:
@@ -573,6 +578,8 @@ async def list_mcp_tools(
                 ]
             )
 
+    except McpServerAccessError:
+        raise HTTPException(status_code=400, detail="MCP server is not approved")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list MCP tools: {str(e)}")
 
@@ -586,6 +593,7 @@ async def list_mcp_resources(
     List available resources from an MCP server.
     """
     try:
+        validate_mcp_server_url(request.mcp_server_url)
         from instacrud.ai.mcp_client import McpClient
 
         async with McpClient(request.mcp_server_url, request.mcp_api_key) as mcp_client:
@@ -603,6 +611,8 @@ async def list_mcp_resources(
                 ]
             )
 
+    except McpServerAccessError:
+        raise HTTPException(status_code=400, detail="MCP server is not approved")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list MCP resources: {str(e)}")
 
@@ -619,6 +629,7 @@ async def read_mcp_resource(
         raise HTTPException(status_code=400, detail="Resource URI is required")
 
     try:
+        validate_mcp_server_url(request.mcp_server_url)
         from instacrud.ai.mcp_client import McpClient
 
         async with McpClient(request.mcp_server_url, request.mcp_api_key) as mcp_client:
@@ -626,6 +637,8 @@ async def read_mcp_resource(
 
             return McpResourceContentResponse(uri=request.uri, content=content)
 
+    except McpServerAccessError:
+        raise HTTPException(status_code=400, detail="MCP server is not approved")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to read MCP resource: {str(e)}")
 

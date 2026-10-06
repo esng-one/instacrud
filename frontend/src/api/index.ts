@@ -58,6 +58,7 @@ export type { MeTierInfo } from './models/MeTierInfo';
 export type { MeUpdateRequest } from './models/MeUpdateRequest';
 export type { MeUsageInfo } from './models/MeUsageInfo';
 export type { MeUserInfo } from './models/MeUserInfo';
+export type { OAuthLinkRequest } from './models/OAuthLinkRequest';
 export type { OrganizationCreate } from './models/OrganizationCreate';
 export type { OrganizationResponse } from './models/OrganizationResponse';
 export type { OrganizationUpdate } from './models/OrganizationUpdate';

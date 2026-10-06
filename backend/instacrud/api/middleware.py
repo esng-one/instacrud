@@ -148,7 +148,8 @@ class DBInitMiddleware:
 
         try:
             token = auth_header.split(" ")[1]
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM],
+                                 options={"require": ["exp"]})
 
             user_id = payload.get("user_id")
             email = payload.get("email")
@@ -175,6 +176,13 @@ class DBInitMiddleware:
                     status_code=401,
                     content={"detail": "User not found"},
                 )
+                await response(scope, receive, send)
+                return
+
+            # A changed password or admin reset invalidates every older bearer.
+            # Requiring this claim also expires tokens issued before this check.
+            if payload.get("auth_version") != user.auth_version:
+                response = JSONResponse(status_code=401, content={"detail": "Session expired"})
                 await response(scope, receive, send)
                 return
 
@@ -207,7 +215,7 @@ class DBInitMiddleware:
             current_user_context.set(
                 CurrentUserContext(
                     user_id=PydanticObjectId(user_id),
-                    email=email,
+                    email=user.email,
                     role=role,
                     organization_id=organization_id,
                 )

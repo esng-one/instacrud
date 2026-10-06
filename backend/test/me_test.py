@@ -219,6 +219,8 @@ async def test_me_organization_endpoints(http_client: httpx.AsyncClient, clean_d
 async def test_me_does_not_require_org_db(http_client: httpx.AsyncClient, clean_db, test_mode):
     """/me must work even when the org DB is unreachable (e.g. the org is still provisioning),
     while org-data endpoints still go through the org-DB switch."""
+    if test_mode == "live":
+        pytest.skip("Patches middleware in-process; only applies when the app runs in-process (mock mode)")
     from unittest.mock import patch, AsyncMock
     from fastapi import HTTPException
     import instacrud.api.middleware as mw

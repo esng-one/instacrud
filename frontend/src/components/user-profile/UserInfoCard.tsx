@@ -52,11 +52,12 @@ export default function UserInfoCard() {
         new_password: newPassword,
       });
 
-      toast.success("Password changed successfully!");
+      toast.success("Password changed. Please sign in again.");
       setIsChangePasswordModalOpen(false);
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      logout(router, undefined, "/signin");
     } catch (error) {
       toast.error(getApiErrorDetail(error) as string);
     } finally {
