@@ -60,6 +60,15 @@ class Organization(RootModel):
     description: Optional[str] = None
     mongo_url: Optional[str] = None
     status: str = Field(default="ACTIVE")
+    # Lease + heartbeat for crash-safe provisioning. The running attempt holds a unique
+    # `provisioning_lease` and bumps `provisioning_heartbeat_at` every few seconds while its
+    # event loop is alive. A killed/CPU-throttled attempt stops heartbeating; once the
+    # heartbeat is stale another attempt can atomically claim the lease and resume — and the
+    # old attempt, seeing a changed lease, aborts without clobbering it. Heartbeat staleness
+    # (not elapsed time) is what marks a provision dead, so a slow-but-healthy provision is
+    # never mistaken for stuck.
+    provisioning_lease: Optional[str] = None
+    provisioning_heartbeat_at: Optional[datetime] = None
     tier_id: Annotated[Optional[PydanticObjectId], Indexed()] = None
     local_only_conversations: bool = False  # If true, don't sync conversations to server
 
@@ -89,6 +98,16 @@ class User(RootModel):
     local_only_conversations: Optional[bool] = None  # None means use org setting
     auth_version: int = 0  # Increment to revoke previously issued bearer tokens.
     oauth_identities: dict[str, str] = Field(default_factory=dict)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def _normalize_email(cls, v):
+        # Sign-in, uniqueness checks and password reset all look the user up by
+        # email.lower(). `.insert()` does not run save(), so without normalizing here a
+        # mixed-case signup email would be stored as typed — the user could then never
+        # sign in and a case-variant could register a duplicate account. Normalize on
+        # every construction so storage always matches the lowercased lookups.
+        return v.lower() if isinstance(v, str) else v
 
     class Settings:
         name = "users"

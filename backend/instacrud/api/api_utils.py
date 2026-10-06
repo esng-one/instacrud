@@ -63,6 +63,7 @@ PUBLIC_PATHS = {
 SYSTEM_ONLY_PATHS = {
     "/api/v1/me",
     "/api/v1/me/organization",
+    "/api/v1/me/organization/retry-provisioning",
 }
 
 # --- Helper: Role-based access control ---

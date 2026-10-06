@@ -76,4 +76,24 @@ export class MeService {
             },
         });
     }
+    /**
+     * Retry Provisioning
+     * Resume a stuck organization provisioning.
+     *
+     * The provisioning task is a fire-and-forget background job; if its worker is
+     * killed or CPU-throttled mid-run (common on serverless once the response is sent)
+     * the org is stranded in PROVISIONING. The provisioning guard calls this to recover.
+     *
+     * It re-dispatches an idempotent provisioning attempt, but only once the current
+     * attempt looks stalled (``PROVISIONING_STALE_SECONDS``), so a healthy in-flight
+     * provision is never interrupted. FAILED orgs are always retried.
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static retryProvisioningMeOrganizationRetryProvisioningPost(): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/me/organization/retry-provisioning',
+        });
+    }
 }

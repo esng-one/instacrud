@@ -11,8 +11,15 @@ import AuthLoader from "@/components/auth/AuthLoader";
 import { getApiErrorInfo } from "@/app/lib/api-error";
 import { logout as performLogout } from "@/app/lib/util";
 
-const PROVISIONING_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+// Above the worst-case healthy Firestore provision (DB creation + up to ~4 min IAM
+// propagation). Recovery of a genuinely dead attempt is fast (heartbeat-based), so this only
+// bounds how long we wait before showing a Failed screen with a manual Retry.
+const PROVISIONING_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 const POLL_INTERVAL = 5000;
+// How often to ask the server to resume a stuck provision. The server only actually
+// re-dispatches once its own attempt looks stalled, so calling this on a cadence is
+// safe (a healthy in-flight provision is left alone) and recovers a dead background task.
+const RESUME_INTERVAL = 30000;
 const ORG_STATUS_CACHE_KEY = "org.status";
 
 function getCachedOrgStatus(orgId: string): string | null {
@@ -68,6 +75,7 @@ export default function ProvisioningGuard({ children }: { children: React.ReactN
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const resumeIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const router = useRouter();
   // Prevents duplicate logout calls from concurrent effects or polling callbacks.
@@ -90,6 +98,19 @@ export default function ProvisioningGuard({ children }: { children: React.ReactN
   // effect's scope — can always call the latest version without being deps of that effect.
   const signOutRef = useRef(signOut);
   useEffect(() => { signOutRef.current = signOut; }, [signOut]);
+
+  // Ask the server to resume a stuck provision. The server only re-dispatches once its
+  // own attempt looks stalled, so this is a safe no-op for a healthy in-flight provision
+  // and recovers a background task that was killed/throttled (e.g. on a prior session).
+  const requestResume = useCallback(async () => {
+    try {
+      await MeService.retryProvisioningMeOrganizationRetryProvisioningPost();
+    } catch {
+      // Best-effort: the poll loop and 5-minute timeout still govern the UX.
+    }
+  }, []);
+  const requestResumeRef = useRef(requestResume);
+  useEffect(() => { requestResumeRef.current = requestResume; }, [requestResume]);
 
   // React immediately to a server-side 401 surfaced by MeContext.
   // Client-side JWT validity ≠ server-side auth validity: the token may be
@@ -115,6 +136,7 @@ export default function ProvisioningGuard({ children }: { children: React.ReactN
     const stopPolling = () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (resumeIntervalRef.current) clearInterval(resumeIntervalRef.current);
     };
 
     const poll = async () => {
@@ -143,6 +165,10 @@ export default function ProvisioningGuard({ children }: { children: React.ReactN
     };
 
     const startPolling = () => {
+      // Nudge the server to resume immediately (revives a task killed in a prior
+      // session when the user reopens the app), then keep nudging on a cadence.
+      requestResumeRef.current();
+      resumeIntervalRef.current = setInterval(() => requestResumeRef.current(), RESUME_INTERVAL);
       intervalRef.current = setInterval(poll, POLL_INTERVAL);
       timeoutRef.current = setTimeout(() => {
         setStatus("failed");
@@ -245,7 +271,7 @@ export default function ProvisioningGuard({ children }: { children: React.ReactN
 
         <div className="flex gap-4 mt-6">
           <button
-            onClick={() => window.location.reload()}
+            onClick={async () => { await requestResume(); window.location.reload(); }}
             className="px-4 py-2 text-white bg-brand-500 rounded-md hover:bg-brand-600"
           >
             Retry
